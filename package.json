@@ -11,6 +11,7 @@
   "dependencies": {
     "axios": "^0.17.1",
     "express": "^4.16.2",
-    "socket.io": "^2.0.4"
+    "socket.io": "^2.0.4",
+    "socketio-file-upload": "^0.6.0"
   }
 }

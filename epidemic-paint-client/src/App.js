@@ -1,7 +1,8 @@
 import React, { Component } from "react";
-import Canvas from "./canvas";
 import Dropzone from "react-dropzone";
-import './App.css';
+import socketIOClient from "socket.io-client";
+const SocketIOFileUpload = require("socketio-file-upload");
+
 
 class App extends Component {
   constructor() {
@@ -11,20 +12,148 @@ class App extends Component {
         showDropzone: false,
         crayonColor: 'black',
         crayonWidth: 3,
-        currentDrawing: {imgURI: window.sessionStorage.getItem('history'), drawingName: 'my-drawing'},
-        history: false
+        paint: false,
+        mousePos: false,
+        mousePosPrev: false,
+        history: [],
+        uploadImg: 'uploads/Moomintroll.jpg'
     };
       this.handleDragEnter = this.handleDragEnter.bind(this);
       this.handleDragLeave = this.handleDragLeave.bind(this);
-      this.onImageDrop = this.onImageDrop.bind(this);
+      this.onImageDropAccept = this.onImageDropAccept.bind(this);
+      this.handleMouseDown = this.handleMouseDown.bind(this);
+      this.handleMouseMove = this.handleMouseMove.bind(this);
+      this.handleMouseUp = this.handleMouseUp.bind(this);
+      this.handleMouseLeave = this.handleMouseLeave.bind(this);
+      this.mainLoop = this.mainLoop.bind(this);
+      this.handleUndo = this.handleUndo.bind(this);
+      this.resetToLatest = this.resetToLatest.bind(this);
+      this.loadDrawing = this.loadDrawing.bind(this);
+  }
+
+  componentWillMount() {
+      const history = window.sessionStorage.getItem('history');
+      if (history) {
+          this.setState({history: JSON.parse(history)});
+      }
   }
 
   componentDidMount() {
-     if (window.sessionStorage.getItem('history')) {
-         console.log('there is history in storage');
-         this.setState({currentDrawing: {imgURI: window.sessionStorage.getItem('history'), drawingName: 'my-drawing'}});
-     }
+      const { endpoint } = this.state;
+      this.socket = socketIOClient(endpoint);
+      this.uploader = new SocketIOFileUpload(this.socket);
+      this.canvas = this.refs.canvas;
+
+      if (this.state.history.length > 0) {
+          this.loadDrawing(this.state.history.slice(-1)[0]);
+          //this.loadDrawing(this.state.uploadImg);
+      }
+
+      this.socket.on('draw_line', (data) => {
+          let line = data.line;
+          let context = this.canvas.getContext("2d");
+          context.strokeStyle = this.props.crayonColor;
+          context.lineJoin = "round";
+          context.lineWidth = this.props.crayonWidth;
+          context.beginPath();
+          context.moveTo(line[0].x * window.innerWidth, line[0].y * window.innerWidth);
+          context.lineTo(line[1].x * window.innerWidth, line[1].y * window.innerWidth);
+          context.closePath();
+          context.stroke();
+      });
+
+      this.socket.on('update_client_history', () => {
+          this.setState({history: [...this.state.history, this.canvas.toDataURL()]});
+          window.sessionStorage.setItem('history', JSON.stringify([...this.state.history, this.canvas.toDataURL()]));
+
+      });
+
+      this.socket.on('undo_latest', () => {
+          this.resetToLatest();
+      });
+
+      this.socket.on('img_uploaded', (name) => {
+          let readablePath = name.substr(29);
+          console.log(readablePath);
+          console.log('running loaddrawing with state');
+          this.loadDrawing(readablePath);
+      });
+
+      this.mainLoop();
   }
+
+    handleMouseDown(e) {
+        this.socket.emit('update_client_history');
+        this.setState({mousePos:{x: (e.clientX - this.canvas.offsetLeft)/window.innerWidth,
+            y: (e.clientY - this.canvas.offsetTop)/window.innerWidth}});
+        this.setState({mousePosPrev:{x: (e.clientX - this.canvas.offsetLeft - 1)/window.innerWidth,
+            y: (e.clientY - this.canvas.offsetTop)/window.innerWidth}});
+        this.setState({ paint: true });
+    }
+
+
+    loadDrawing(imgSrc) {
+      console.log('loaddrawing running');
+        let context = this.canvas.getContext("2d");
+        context.beginPath();
+        let img = new Image();
+        img.onload = () => {
+            context.clearRect(0 , 0,this.canvas.width, this.canvas.height);
+            context.drawImage(img, 0, 0);
+        };
+        img.src = imgSrc;
+    }
+
+
+
+    handleMouseUp() {
+        this.socket.emit('update_client_history');
+        this.setState({ paint: false });
+    }
+
+    handleMouseMove(e) {
+        if (this.state.paint) {
+            this.setState({
+                mousePos: {
+                    x: (e.clientX - this.canvas.offsetLeft) / window.innerWidth,
+                    y: (e.clientY - this.canvas.offsetTop) / window.innerWidth
+                }
+            });
+        }
+    }
+
+    handleMouseLeave() {
+        this.setState({ paint: false });
+    }
+
+    handleUndo() {
+        this.socket.emit('undo_latest');
+    }
+
+    resetToLatest() {
+       /* console.log('reset');
+        let context = this.canvas.getContext("2d");
+        context.beginPath();
+        let img = new Image();
+        img.onload = () => {
+            context.clearRect(0 , 0,this.canvas.width, this.canvas.height);
+            context.drawImage(img, 0, 0);
+        };
+        console.log(this.state.history);
+        img.src = this.state.history.pop();
+        console.log(img.src);*/
+        this.loadDrawing(this.state.history.pop());
+        //this.loadDrawing(this.state.uploadImg);
+    }
+
+    mainLoop() {
+        if (this.state.paint && this.state.mousePosPrev) {
+            this.socket.emit('draw_line', {line: [this.state.mousePos, this.state.mousePosPrev]});
+            this.setState({mouseDrag: false});
+        }
+        this.setState({mousePosPrev: {x: this.state.mousePos.x, y: this.state.mousePos.y}});
+        this.timeout = setTimeout(this.mainLoop, 25);
+    }
 
     handleDragEnter() {
         this.setState({showDropzone: true});
@@ -34,10 +163,14 @@ class App extends Component {
         this.setState({showDropzone: false});
     }
 
-    onImageDrop() {
+    onImageDropAccept(files) {
         console.log('image drop');
         this.setState({showDropzone: false});
+        console.log(files[0].name);
+        this.uploader.submitFiles(files);
     }
+
+
 
   render() {
     const { showDropzone } = this.state;
@@ -49,29 +182,18 @@ class App extends Component {
             ? <Dropzone
                     multiple={false}
                     accept="image/*"
-                    onDrop={this.onImageDrop}>
+                    onDropAccepted={this.onImageDropAccept}>
                   <p>Drop an image here to add it to the drawing</p>
                 </Dropzone>
-            : <Canvas
-                    crayonColor={this.state.crayonColor}
-                    crayonWdith={this.state.crayonWidth}
-                    endpoint={this.state.endpoint}
-                    imgURI={this.state.currentDrawing.imgURI}/>}
-
-{/*            <div className={this.state.showDropzone ? '' : 'hidden'}>
-            <Dropzone
-                multiple={false}
-                accept="image/*"
-                onDrop={this.onImageDrop}>
-                <p>Drop an image here to add it to the drawing</p>
-            </Dropzone>
-            </div>
-            <div className={this.state.showDropzone ? 'hidden' : ''}>
-            <Canvas
-                crayonColor={this.state.crayonColor}
-                crayonWdith={this.state.crayonWidth}
-                endpoint={this.state.endpoint}/>
-            </div>*/}
+            : <canvas style={{border: '1px solid black'}}
+                      ref="canvas"
+                      width={window.innerWidth*0.5} height={window.innerWidth*0.5}
+                      onMouseDown={this.handleMouseDown}
+                      onMouseMove={this.handleMouseMove}
+                      onMouseUp={this.handleMouseUp}
+                      onMouseLeave={this.handleMouseLeave}>
+                </canvas>}
+            <button onClick={this.handleUndo}>undo</button>
         </div>
     );
   }
