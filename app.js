@@ -20,6 +20,7 @@ let drawings = [];
 
 io.on("connection", socket => {
     console.log("New client connected");
+    socket.emit('saved_drawings', drawings);
 
     socket.on('draw_line', function(data) {
         io.emit('draw_line', { line: data.line });
@@ -34,14 +35,13 @@ io.on("connection", socket => {
     });
 
     socket.on('image_drop_accept', (url) => {
-        console.log(url);
         io.emit('image_drop_accept', url);
     });
 
     socket.on('save_drawing', (data) => {
-        let index = drawings.findIndex(drawing => drawing.drawingName === data.drawingName);
+        let index = drawings.findIndex(drawing => drawing.name === data.name);
         if (index > -1) {
-            drawings[index].imgURI = data.imgURI;
+            drawings[index].url = data.url;
         } else {
             drawings.push(data);
         }

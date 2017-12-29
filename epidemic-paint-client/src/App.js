@@ -1,7 +1,8 @@
 import React, {Component} from "react";
 import Dropzone from "react-dropzone";
 import socketIOClient from "socket.io-client";
-
+import DrawingsList from "./drawingsList";
+import ContentEditable from "react-contenteditable";
 
 class App extends Component {
     constructor() {
@@ -14,7 +15,8 @@ class App extends Component {
             paint: false,
             mousePos: false,
             mousePosPrev: false,
-            history: []
+            history: [],
+            savedDrawings: []
         };
         this.handleDragEnter = this.handleDragEnter.bind(this);
         this.handleDragLeave = this.handleDragLeave.bind(this);
@@ -25,14 +27,20 @@ class App extends Component {
         this.handleMouseLeave = this.handleMouseLeave.bind(this);
         this.mainLoop = this.mainLoop.bind(this);
         this.handleUndo = this.handleUndo.bind(this);
-        this.resetToLatest = this.resetToLatest.bind(this);
         this.loadDrawing = this.loadDrawing.bind(this);
+        this.handleSave = this.handleSave.bind(this);
+        this.clickedDrawing = this.clickedDrawing.bind(this);
+        this.handleNameChange = this.handleNameChange.bind(this);
     }
 
     componentWillMount() {
         const history = window.sessionStorage.getItem('history');
+        const currDrawing = window.sessionStorage.getItem('currDrawing');
         if (history) {
             this.setState({history: JSON.parse(history)});
+        }
+        if (currDrawing) {
+            this.setState({html: currDrawing});
         }
     }
 
@@ -46,6 +54,10 @@ class App extends Component {
             this.loadDrawing(this.state.history.slice(-1)[0]);
         }
 
+        this.socket.on('saved_drawings', (drawings) => {
+            console.log(drawings);
+            this.setState({savedDrawings: drawings});
+        });
 
         this.socket.on('draw_line', (data) => {
             let line = data.line;
@@ -61,18 +73,19 @@ class App extends Component {
         });
 
         this.socket.on('update_client_history', () => {
+            console.log('updateing client history');
             this.setState({history: [...this.state.history, this.canvas.toDataURL()]});
             window.sessionStorage.setItem('history', JSON.stringify([...this.state.history, this.canvas.toDataURL()]));
+            window.sessionStorage.setItem('currDrawing', this.state.html);
         });
 
         this.socket.on('image_drop_accept', (src) => {
             this.loadDrawing(src);
-            this.socket.emit('update_client_history');
-
         });
 
         this.socket.on('undo_latest', () => {
-            this.resetToLatest();
+            this.state.history.pop();
+            this.loadDrawing(this.state.history.slice(-1)[0]);
         });
 
 
@@ -133,6 +146,7 @@ class App extends Component {
         img.onload = () => {
             context.clearRect(0, 0, this.canvas.width, this.canvas.height);
             context.drawImage(img, 0, 0);
+            this.socket.emit('update_client_history');
         };
         img.src = imgSrc;
     }
@@ -140,10 +154,6 @@ class App extends Component {
 
     handleUndo() {
         this.socket.emit('undo_latest');
-    }
-
-    resetToLatest() {
-        this.loadDrawing(this.state.history.pop());
     }
 
 
@@ -167,12 +177,31 @@ class App extends Component {
         this.socket.emit('image_drop_accept', URL.createObjectURL(files[0]));
     }
 
+    handleSave() {
+        this.socket.emit('save_drawing', {name: this.state.html, url: this.state.history.slice(-1)[0]})
+    }
+
+    clickedDrawing(drawing) {
+        console.log('clicked drawing');
+        console.log(drawing);
+        this.setState({html: drawing.name});
+        this.loadDrawing(drawing.url);
+    }
+
+    handleNameChange(event) {
+        this.setState({html: event.target.value});
+    }
+
 
     render() {
         return (
             <div style={{textAlign: "center"}}
                  onDragEnter={this.handleDragEnter}
                  onDragLeave={this.handleDragLeave}>
+                <ContentEditable
+                html={this.state.html ? this.state.html : 'new_drawing'}
+                disabled={false}
+                onChange={this.handleNameChange}/>
                 <div style={{display: this.state.showDropzone ? 'block' : 'none'}}>
                     <Dropzone
                         multiple={false}
@@ -192,6 +221,9 @@ class App extends Component {
                     </canvas>
                 </div>
                 <button onClick={this.handleUndo}>undo</button>
+                <button onClick={this.handleSave}>save</button>
+                <DrawingsList drawings={this.state.savedDrawings}
+                clickedDrawing={this.clickedDrawing}/>
             </div>
         );
     }
