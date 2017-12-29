@@ -52,6 +52,11 @@ io.on("connection", socket => {
         io.emit('undo_latest');
     });
 
+    socket.on('image_drop_accept', (url) => {
+        console.log(url);
+        io.emit('image_drop_accept', url);
+    });
+
     socket.on('save_drawing', (data) => {
         let index = drawings.findIndex(drawing => drawing.drawingName === data.drawingName);
         if (index > -1) {

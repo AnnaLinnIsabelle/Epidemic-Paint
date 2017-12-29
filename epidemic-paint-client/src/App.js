@@ -16,7 +16,7 @@ class App extends Component {
         mousePos: false,
         mousePosPrev: false,
         history: [],
-        uploadImg: 'uploads/Moomintroll.jpg'
+        uploadImg: false
     };
       this.handleDragEnter = this.handleDragEnter.bind(this);
       this.handleDragLeave = this.handleDragLeave.bind(this);
@@ -32,6 +32,7 @@ class App extends Component {
   }
 
   componentWillMount() {
+      console.log('app will mount');
       const history = window.sessionStorage.getItem('history');
       if (history) {
           this.setState({history: JSON.parse(history)});
@@ -39,15 +40,23 @@ class App extends Component {
   }
 
   componentDidMount() {
+      console.log('app did mount');
+      this.counter = 0;
       const { endpoint } = this.state;
       this.socket = socketIOClient(endpoint);
       this.uploader = new SocketIOFileUpload(this.socket);
       this.canvas = this.refs.canvas;
 
+      if (this.state.uploadImg) {
+          console.log('there was uploadImg');
+          this.loadDrawing(this.state.uploadImg);
+          this.setState({uploadImg: false});
+      }
+
       if (this.state.history.length > 0) {
           this.loadDrawing(this.state.history.slice(-1)[0]);
-          //this.loadDrawing(this.state.uploadImg);
       }
+
 
       this.socket.on('draw_line', (data) => {
           let line = data.line;
@@ -68,6 +77,10 @@ class App extends Component {
 
       });
 
+      this.socket.on('image_drop_accept', (src) => {
+          this.loadDrawing(src);
+      });
+
       this.socket.on('undo_latest', () => {
           this.resetToLatest();
       });
@@ -80,6 +93,10 @@ class App extends Component {
       });
 
       this.mainLoop();
+  }
+
+  componentWillUnmount() {
+      console.log('app will unmount');
   }
 
     handleMouseDown(e) {
@@ -156,18 +173,29 @@ class App extends Component {
     }
 
     handleDragEnter() {
+      console.log('dragenter');
+      this.counter++;
+        console.log(this.counter);
         this.setState({showDropzone: true});
     }
 
     handleDragLeave() {
-        this.setState({showDropzone: false});
+      console.log('dragleave');
+      this.counter--;
+      console.log(this.counter);
+      if (this.counter === 0) {
+          this.setState({showDropzone: false});
+      }
     }
 
     onImageDropAccept(files) {
         console.log('image drop');
+        this.counter = 0;
         this.setState({showDropzone: false});
-        console.log(files[0].name);
-        this.uploader.submitFiles(files);
+        this.setState({uploadImg: URL.createObjectURL(files[0])});
+        //this.uploader.submitFiles(files);
+        //this.loadDrawing(URL.createObjectURL(files[0]));
+        this.socket.emit('image_drop_accept', URL.createObjectURL(files[0]));
     }
 
 
@@ -179,19 +207,19 @@ class App extends Component {
              onDragEnter={this.handleDragEnter}
              onDragLeave={this.handleDragLeave}>
             {showDropzone
-            ? <Dropzone
+            ?  <Dropzone
                     multiple={false}
                     accept="image/*"
                     onDropAccepted={this.onImageDropAccept}>
-                  <p>Drop an image here to add it to the drawing</p>
+                    <p>Drop an image here to add it to the drawing</p>
                 </Dropzone>
-            : <canvas style={{border: '1px solid black'}}
-                      ref="canvas"
-                      width={window.innerWidth*0.5} height={window.innerWidth*0.5}
-                      onMouseDown={this.handleMouseDown}
-                      onMouseMove={this.handleMouseMove}
-                      onMouseUp={this.handleMouseUp}
-                      onMouseLeave={this.handleMouseLeave}>
+            :   <canvas style={{border: '1px solid black'}}
+                        ref="canvas"
+                        width={window.innerWidth*0.5} height={window.innerWidth*0.5}
+                        onMouseDown={this.handleMouseDown}
+                        onMouseMove={this.handleMouseMove}
+                        onMouseUp={this.handleMouseUp}
+                        onMouseLeave={this.handleMouseLeave}>
                 </canvas>}
             <button onClick={this.handleUndo}>undo</button>
         </div>
