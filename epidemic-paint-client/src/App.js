@@ -74,11 +74,12 @@ class App extends Component {
       this.socket.on('update_client_history', () => {
           this.setState({history: [...this.state.history, this.canvas.toDataURL()]});
           window.sessionStorage.setItem('history', JSON.stringify([...this.state.history, this.canvas.toDataURL()]));
-
       });
 
       this.socket.on('image_drop_accept', (src) => {
           this.loadDrawing(src);
+          this.socket.emit('update_client_history');
+
       });
 
       this.socket.on('undo_latest', () => {
@@ -100,7 +101,7 @@ class App extends Component {
   }
 
     handleMouseDown(e) {
-        this.socket.emit('update_client_history');
+        //this.socket.emit('update_client_history');
         this.setState({mousePos:{x: (e.clientX - this.canvas.offsetLeft)/window.innerWidth,
             y: (e.clientY - this.canvas.offsetTop)/window.innerWidth}});
         this.setState({mousePosPrev:{x: (e.clientX - this.canvas.offsetLeft - 1)/window.innerWidth,
@@ -190,37 +191,37 @@ class App extends Component {
 
     onImageDropAccept(files) {
         console.log('image drop');
-        this.counter = 0;
         this.setState({showDropzone: false});
-        this.setState({uploadImg: URL.createObjectURL(files[0])});
+        this.counter = 0;
+        //this.setState({uploadImg: URL.createObjectURL(files[0])});
         //this.uploader.submitFiles(files);
-        //this.loadDrawing(URL.createObjectURL(files[0]));
         this.socket.emit('image_drop_accept', URL.createObjectURL(files[0]));
     }
 
 
-
   render() {
-    const { showDropzone } = this.state;
     return (
         <div style={{ textAlign: "center" }}
              onDragEnter={this.handleDragEnter}
              onDragLeave={this.handleDragLeave}>
-            {showDropzone
-            ?  <Dropzone
+            <div style={{display: this.state.showDropzone ? 'block' : 'none' }}>
+             <Dropzone
                     multiple={false}
                     accept="image/*"
                     onDropAccepted={this.onImageDropAccept}>
                     <p>Drop an image here to add it to the drawing</p>
                 </Dropzone>
-            :   <canvas style={{border: '1px solid black'}}
+            </div>
+            <div style={{display: this.state.showDropzone ? 'none' : 'block' }}>
+               <canvas style={{border: '1px solid black'}}
                         ref="canvas"
                         width={window.innerWidth*0.5} height={window.innerWidth*0.5}
                         onMouseDown={this.handleMouseDown}
                         onMouseMove={this.handleMouseMove}
                         onMouseUp={this.handleMouseUp}
                         onMouseLeave={this.handleMouseLeave}>
-                </canvas>}
+                </canvas>
+            </div>
             <button onClick={this.handleUndo}>undo</button>
         </div>
     );
