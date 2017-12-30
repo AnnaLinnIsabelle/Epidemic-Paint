@@ -3,6 +3,9 @@ import Dropzone from "react-dropzone";
 import socketIOClient from "socket.io-client";
 import DrawingsList from "./drawingsList";
 import ContentEditable from "react-contenteditable";
+import CrayonSettings from './crayonSettings';
+import {Grid, Row, Col, Button} from 'react-bootstrap';
+import './App.css';
 
 class App extends Component {
     constructor() {
@@ -33,6 +36,8 @@ class App extends Component {
         this.handleSave = this.handleSave.bind(this);
         this.clickedDrawing = this.clickedDrawing.bind(this);
         this.handleNameChange = this.handleNameChange.bind(this);
+        this.handleColorChange = this.handleColorChange.bind(this);
+        this.handleWidthChange = this.handleWidthChange.bind(this);
     }
 
     componentWillMount() {
@@ -44,6 +49,7 @@ class App extends Component {
         if (currDrawing) {
             console.log('there is currDrawing in sessionStorage');
             this.setState({html: currDrawing});
+            this.setState({socketRoom: currDrawing});
         }
     }
 
@@ -58,9 +64,14 @@ class App extends Component {
         }
 
         this.socket.on('initial_room', (room) => {
+            if (this.state.socketRoom === false) {
                 console.log('connecting to room ' + room);
                 this.setState({socketRoom: room});
                 this.socket.emit('subscribe', room);
+            } else {
+                console.log('connectiong to room ' + this.state.socketRoom);
+                this.socket.emit('subscribe', this.state.socketRoom);
+            }
         });
 
         this.socket.on('saved_drawings', (drawings) => {
@@ -70,12 +81,12 @@ class App extends Component {
         this.socket.on('draw_line', (data) => {
             let line = data.line;
             let context = this.canvas.getContext("2d");
-            context.strokeStyle = this.props.crayonColor;
+            context.strokeStyle = data.color;
             context.lineJoin = "round";
-            context.lineWidth = this.props.crayonWidth;
+            context.lineWidth = data.width;
             context.beginPath();
-            context.moveTo(line[0].x * window.innerWidth, line[0].y * window.innerWidth);
-            context.lineTo(line[1].x * window.innerWidth, line[1].y * window.innerWidth);
+            context.moveTo(line[0].x, line[0].y);
+            context.lineTo(line[1].x, line[1].y);
             context.closePath();
             context.stroke();
         });
@@ -84,7 +95,7 @@ class App extends Component {
             console.log('updateing client history');
             this.setState({history: [...this.state.history, this.canvas.toDataURL()]});
             window.sessionStorage.setItem('history', JSON.stringify([...this.state.history, this.canvas.toDataURL()]));
-            window.sessionStorage.setItem('currDrawing', this.state.html ? this.state.html : 'new_drawing');
+            window.sessionStorage.setItem('currDrawing', this.state.socketRoom);
         });
 
         this.socket.on('image_drop_accept', (src) => {
@@ -104,14 +115,14 @@ class App extends Component {
     handleMouseDown(e) {
         this.setState({
             mousePos: {
-                x: (e.clientX - this.canvas.offsetLeft) / window.innerWidth,
-                y: (e.clientY - this.canvas.offsetTop) / window.innerWidth
+                x: (e.clientX - this.canvas.getBoundingClientRect().left),
+                y: (e.clientY - this.canvas.getBoundingClientRect().top)
             }
         });
         this.setState({
             mousePosPrev: {
-                x: (e.clientX - this.canvas.offsetLeft - 1) / window.innerWidth,
-                y: (e.clientY - this.canvas.offsetTop) / window.innerWidth
+                x: (e.clientX - this.canvas.getBoundingClientRect().left - 1),
+                y: (e.clientY - this.canvas.getBoundingClientRect().top)
             }
         });
         this.setState({paint: true});
@@ -126,8 +137,8 @@ class App extends Component {
         if (this.state.paint) {
             this.setState({
                 mousePos: {
-                    x: (e.clientX - this.canvas.offsetLeft) / window.innerWidth,
-                    y: (e.clientY - this.canvas.offsetTop) / window.innerWidth
+                    x: (e.clientX - this.canvas.getBoundingClientRect().left),
+                    y: (e.clientY - this.canvas.getBoundingClientRect().top)
                 }
             });
         }
@@ -139,7 +150,12 @@ class App extends Component {
 
     mainLoop() {
         if (this.state.paint && this.state.mousePosPrev) {
-            this.socket.emit('draw_line', {room: this.state.socketRoom, line: [this.state.mousePos, this.state.mousePosPrev]});
+            this.socket.emit('draw_line', {
+                room: this.state.socketRoom,
+                line: [this.state.mousePos, this.state.mousePosPrev],
+                crayonColor: this.state.crayonColor,
+                crayonWidth: this.state.crayonWidth
+            });
             this.setState({mouseDrag: false});
         }
         this.setState({mousePosPrev: {x: this.state.mousePos.x, y: this.state.mousePos.y}});
@@ -191,6 +207,7 @@ class App extends Component {
         this.setState({socketRoom: this.state.html});
         this.socket.emit('save_drawing',
             {room: this.state.html, name: this.state.html, url: this.state.history.slice(-1)[0]});
+        this.socket.emit('update_client_history', {room: this.state.html});
     }
 
     clickedDrawing(drawing) {
@@ -207,39 +224,68 @@ class App extends Component {
         this.setState({html: event.target.value});
     }
 
+    handleColorChange(color) {
+        this.setState({crayonColor: color.hex});
+    }
+
+    handleWidthChange(value) {
+        this.setState({crayonWidth: value});
+    }
+
 
     render() {
         return (
-            <div style={{textAlign: "center"}}
-                 onDragEnter={this.handleDragEnter}
-                 onDragLeave={this.handleDragLeave}>
-                <ContentEditable
-                html={this.state.html}
-                disabled={false}
-                onChange={this.handleNameChange}/>
-                <div style={{display: this.state.showDropzone ? 'block' : 'none'}}>
-                    <Dropzone
-                        multiple={false}
-                        accept="image/*"
-                        onDropAccepted={this.onImageDropAccept}>
-                        <p>Drop an image here to add it to the drawing</p>
-                    </Dropzone>
-                </div>
-                <div style={{display: this.state.showDropzone ? 'none' : 'block'}}>
-                    <canvas style={{border: '1px solid black'}}
-                            ref="canvas"
-                            width={window.innerWidth * 0.5} height={window.innerWidth * 0.5}
-                            onMouseDown={this.handleMouseDown}
-                            onMouseMove={this.handleMouseMove}
-                            onMouseUp={this.handleMouseUp}
-                            onMouseLeave={this.handleMouseLeave}>
-                    </canvas>
-                </div>
-                <button onClick={this.handleUndo}>undo</button>
-                <button onClick={this.handleSave}>save</button>
-                <DrawingsList drawings={this.state.savedDrawings}
-                clickedDrawing={this.clickedDrawing}/>
-            </div>
+            <Grid onDragEnter={this.handleDragEnter}
+                  onDragLeave={this.handleDragLeave}>
+                    <Row>
+                        <h1>Epidemic Paint</h1>
+                    </Row>
+                    <Row>
+                        <Col xs={6}>
+                            <ContentEditable
+                                             html={this.state.html}
+                                             disabled={false}
+                                             onChange={this.handleNameChange}/>
+                        </Col>
+                        <Col xs={2} xsOffset={2}>
+                        <Button>New Drawing</Button>
+                        </Col>
+                    </Row>
+                    <Row>
+                        <Col sm={6}>
+                        <div style={{display: this.state.showDropzone ? 'block' : 'none'}}>
+                            <Dropzone
+                                multiple={false}
+                                accept="image/*"
+                                onDropAccepted={this.onImageDropAccept}>
+                                <p>Drop an image here to add it to the drawing</p>
+                            </Dropzone>
+
+                        </div>
+                        <div style={{display: this.state.showDropzone ? 'none' : 'block'}}>
+                            <canvas style={{border: '1px solid black'}}
+                                    ref="canvas"
+                                    width={300} height={300}
+                                    onMouseDown={this.handleMouseDown}
+                                    onMouseMove={this.handleMouseMove}
+                                    onMouseUp={this.handleMouseUp}
+                                    onMouseLeave={this.handleMouseLeave}>
+                            </canvas>
+                        </div>
+                        </Col>
+                        <Col sm={4}>
+                        <CrayonSettings color={this.state.crayonColor}
+                                        handleColorChange={this.handleColorChange}
+                                        handleWidthChange={this.handleWidthChange}/>
+                        <Button onClick={this.handleUndo}>undo</Button>
+                        <Button onClick={this.handleSave}>save</Button>
+                        </Col>
+                        <Col sm={2}>
+                        <DrawingsList drawings={this.state.savedDrawings}
+                                      clickedDrawing={this.clickedDrawing}/>
+                        </Col>
+                    </Row>
+            </Grid>
         );
     }
 }

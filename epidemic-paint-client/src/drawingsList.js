@@ -15,7 +15,6 @@ class DrawingsList extends Component {
         this.props.clickedDrawing(drawing);
     }
 
-
     render() {
         return (
             <div>

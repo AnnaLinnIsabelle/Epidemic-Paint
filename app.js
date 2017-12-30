@@ -36,7 +36,7 @@ io.on("connection", socket => {
     });
 
     socket.on('draw_line', function(data) {
-        io.in(data.room).emit('draw_line', { line: data.line });
+        io.in(data.room).emit('draw_line', { line: data.line, color: data.crayonColor, width: data.crayonWidth });
     });
 
     socket.on('update_client_history', (data) => {
@@ -59,6 +59,7 @@ io.on("connection", socket => {
         } else {
             drawings.push(data);
         }
+        io.emit('saved_drawings', drawings);
     });
 
     socket.on("disconnect", () => console.log("client disconnected"));

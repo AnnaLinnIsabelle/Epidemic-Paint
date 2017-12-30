@@ -27,4 +27,6 @@
   to { transform: rotate(360deg); }
 }
 
-.hidden { display:none; }
+.componentDiv {
+  padding: 8px;
+}

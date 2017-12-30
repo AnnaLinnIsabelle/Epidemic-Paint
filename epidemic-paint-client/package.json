@@ -3,7 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "rc-slider": "^8.5.0",
     "react": "^16.2.0",
+    "react-bootstrap": "^0.31.5",
+    "react-color": "^2.13.8",
     "react-contenteditable": "^2.0.5",
     "react-dom": "^16.2.0",
     "react-dropzone": "^4.2.3",
