@@ -16,7 +16,9 @@ class App extends Component {
             mousePos: false,
             mousePosPrev: false,
             history: [],
-            savedDrawings: []
+            savedDrawings: [],
+            socketRoom: false,
+            html: 'new_drawing'
         };
         this.handleDragEnter = this.handleDragEnter.bind(this);
         this.handleDragLeave = this.handleDragLeave.bind(this);
@@ -40,6 +42,7 @@ class App extends Component {
             this.setState({history: JSON.parse(history)});
         }
         if (currDrawing) {
+            console.log('there is currDrawing in sessionStorage');
             this.setState({html: currDrawing});
         }
     }
@@ -54,8 +57,13 @@ class App extends Component {
             this.loadDrawing(this.state.history.slice(-1)[0]);
         }
 
+        this.socket.on('initial_room', (room) => {
+                console.log('connecting to room ' + room);
+                this.setState({socketRoom: room});
+                this.socket.emit('subscribe', room);
+        });
+
         this.socket.on('saved_drawings', (drawings) => {
-            console.log(drawings);
             this.setState({savedDrawings: drawings});
         });
 
@@ -76,7 +84,7 @@ class App extends Component {
             console.log('updateing client history');
             this.setState({history: [...this.state.history, this.canvas.toDataURL()]});
             window.sessionStorage.setItem('history', JSON.stringify([...this.state.history, this.canvas.toDataURL()]));
-            window.sessionStorage.setItem('currDrawing', this.state.html);
+            window.sessionStorage.setItem('currDrawing', this.state.html ? this.state.html : 'new_drawing');
         });
 
         this.socket.on('image_drop_accept', (src) => {
@@ -84,17 +92,16 @@ class App extends Component {
         });
 
         this.socket.on('undo_latest', () => {
+            console.log(this.state.history);
             this.state.history.pop();
             this.loadDrawing(this.state.history.slice(-1)[0]);
         });
-
 
         this.mainLoop();
     }
 
 
     handleMouseDown(e) {
-        //this.socket.emit('update_client_history');
         this.setState({
             mousePos: {
                 x: (e.clientX - this.canvas.offsetLeft) / window.innerWidth,
@@ -111,7 +118,7 @@ class App extends Component {
     }
 
     handleMouseUp() {
-        this.socket.emit('update_client_history');
+        this.socket.emit('update_client_history', {room: this.state.socketRoom});
         this.setState({paint: false});
     }
 
@@ -132,7 +139,7 @@ class App extends Component {
 
     mainLoop() {
         if (this.state.paint && this.state.mousePosPrev) {
-            this.socket.emit('draw_line', {line: [this.state.mousePos, this.state.mousePosPrev]});
+            this.socket.emit('draw_line', {room: this.state.socketRoom, line: [this.state.mousePos, this.state.mousePosPrev]});
             this.setState({mouseDrag: false});
         }
         this.setState({mousePosPrev: {x: this.state.mousePos.x, y: this.state.mousePos.y}});
@@ -146,26 +153,25 @@ class App extends Component {
         img.onload = () => {
             context.clearRect(0, 0, this.canvas.width, this.canvas.height);
             context.drawImage(img, 0, 0);
-            this.socket.emit('update_client_history');
+            console.log('update client history in room ' + this.state.socketRoom);
+            this.socket.emit('update_client_history', {room: this.state.socketRoom});
         };
         img.src = imgSrc;
     }
 
 
     handleUndo() {
-        this.socket.emit('undo_latest');
+        this.socket.emit('undo_latest', {room: this.state.socketRoom});
     }
 
 
     handleDragEnter() {
         this.counter++;
-        console.log(this.counter);
         this.setState({showDropzone: true});
     }
 
     handleDragLeave() {
         this.counter--;
-        console.log(this.counter);
         if (this.counter === 0) {
             this.setState({showDropzone: false});
         }
@@ -174,14 +180,23 @@ class App extends Component {
     onImageDropAccept(files) {
         this.setState({showDropzone: false});
         this.counter = 0;
-        this.socket.emit('image_drop_accept', URL.createObjectURL(files[0]));
+        this.socket.emit('image_drop_accept',
+            {room: this.state.socketRoom, imgURL: URL.createObjectURL(files[0])});
     }
 
     handleSave() {
-        this.socket.emit('save_drawing', {name: this.state.html, url: this.state.history.slice(-1)[0]})
+        console.log(this.state.html);
+        this.socket.emit('unsubscribe', this.state.socketRoom);
+        this.socket.emit('subscribe', this.state.html);
+        this.setState({socketRoom: this.state.html});
+        this.socket.emit('save_drawing',
+            {room: this.state.html, name: this.state.html, url: this.state.history.slice(-1)[0]});
     }
 
     clickedDrawing(drawing) {
+        this.socket.emit('unsubscribe', this.state.socketRoom);
+        this.socket.emit('subscribe', drawing.name);
+        this.setState({socketRoom: drawing.name});
         console.log('clicked drawing');
         console.log(drawing);
         this.setState({html: drawing.name});
@@ -199,7 +214,7 @@ class App extends Component {
                  onDragEnter={this.handleDragEnter}
                  onDragLeave={this.handleDragLeave}>
                 <ContentEditable
-                html={this.state.html ? this.state.html : 'new_drawing'}
+                html={this.state.html}
                 disabled={false}
                 onChange={this.handleNameChange}/>
                 <div style={{display: this.state.showDropzone ? 'block' : 'none'}}>
