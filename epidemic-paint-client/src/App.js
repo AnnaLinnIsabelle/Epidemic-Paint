@@ -38,6 +38,7 @@ class App extends Component {
         this.handleNameChange = this.handleNameChange.bind(this);
         this.handleColorChange = this.handleColorChange.bind(this);
         this.handleWidthChange = this.handleWidthChange.bind(this);
+        this.getMousePos = this.getMousePos.bind(this);
     }
 
     componentWillMount() {
@@ -111,18 +112,26 @@ class App extends Component {
         this.mainLoop();
     }
 
+    getMousePos(e) {
+        let rect = this.canvas.getBoundingClientRect();
+        let posX = (e.clientX - rect.left) / (rect.right - rect.left) * this.canvas.width;
+        let posY = (e.clientY - rect.top) / (rect.bottom - rect.top) * this.canvas.height;
+
+        return {x: posX, y: posY};
+    }
+
 
     handleMouseDown(e) {
         this.setState({
             mousePos: {
-                x: (e.clientX - this.canvas.getBoundingClientRect().left),
-                y: (e.clientY - this.canvas.getBoundingClientRect().top)
+                x: this.getMousePos(e).x,
+                y: this.getMousePos(e).y
             }
         });
         this.setState({
             mousePosPrev: {
-                x: (e.clientX - this.canvas.getBoundingClientRect().left - 1),
-                y: (e.clientY - this.canvas.getBoundingClientRect().top)
+                x: this.getMousePos(e).x -1,
+                y: this.getMousePos(e).y
             }
         });
         this.setState({paint: true});
@@ -137,8 +146,8 @@ class App extends Component {
         if (this.state.paint) {
             this.setState({
                 mousePos: {
-                    x: (e.clientX - this.canvas.getBoundingClientRect().left),
-                    y: (e.clientY - this.canvas.getBoundingClientRect().top)
+                    x: this.getMousePos(e).x,
+                    y: this.getMousePos(e).y
                 }
             });
         }
@@ -238,22 +247,30 @@ class App extends Component {
             <Grid onDragEnter={this.handleDragEnter}
                   onDragLeave={this.handleDragLeave}>
                     <Row>
+                        <Col xs={12}>
                         <h1>Epidemic Paint</h1>
+                            <hr></hr>
+                        </Col>
                     </Row>
                     <Row>
                         <Col xs={6}>
+                            <div style={{fontSize: '20px'}}>
                             <ContentEditable
                                              html={this.state.html}
                                              disabled={false}
                                              onChange={this.handleNameChange}/>
+                            </div>
                         </Col>
-                        <Col xs={2} xsOffset={2}>
-                        <Button>New Drawing</Button>
+                        <Col xs={6}>
+                            <div style={{float: 'right'}}>
+                            <Button style={{marginLeft: '5px', marginRight: '5px'}} onClick={this.handleSave}>Save</Button>
+                            <Button>New</Button>
+                            </div>
                         </Col>
                     </Row>
                     <Row>
                         <Col sm={6}>
-                        <div style={{display: this.state.showDropzone ? 'block' : 'none'}}>
+                        <div style={{display: this.state.showDropzone ? 'block' : 'none', paddingTop: '5%', paddingBottom: '5%'}}>
                             <Dropzone
                                 multiple={false}
                                 accept="image/*"
@@ -262,10 +279,10 @@ class App extends Component {
                             </Dropzone>
 
                         </div>
-                        <div style={{display: this.state.showDropzone ? 'none' : 'block'}}>
-                            <canvas style={{border: '1px solid black'}}
+                        <div style={{display: this.state.showDropzone ? 'none' : 'block', paddingTop: '5%', paddingBottom: '5%'}}>
+                            <canvas style={{border: '1px solid black', width: '100%', height: 'auto'}}
                                     ref="canvas"
-                                    width={300} height={300}
+                                    width={400} height={400}
                                     onMouseDown={this.handleMouseDown}
                                     onMouseMove={this.handleMouseMove}
                                     onMouseUp={this.handleMouseUp}
@@ -273,14 +290,15 @@ class App extends Component {
                             </canvas>
                         </div>
                         </Col>
-                        <Col sm={4}>
+                        <Col sm={6} md={4}>
+                            <div style={{width: '90%', margin: 'auto', paddingTop: '20px'}}>
                         <CrayonSettings color={this.state.crayonColor}
                                         handleColorChange={this.handleColorChange}
                                         handleWidthChange={this.handleWidthChange}/>
                         <Button onClick={this.handleUndo}>undo</Button>
-                        <Button onClick={this.handleSave}>save</Button>
+                            </div>
                         </Col>
-                        <Col sm={2}>
+                        <Col sm={12} md={2}>
                         <DrawingsList drawings={this.state.savedDrawings}
                                       clickedDrawing={this.clickedDrawing}/>
                         </Col>

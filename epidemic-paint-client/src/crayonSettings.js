@@ -20,12 +20,14 @@ class CrayonSettings extends React.Component {
     render() {
         return (
             <div>
-                <div style={{padding: '30px'}}>
+                <h5>Crayon color</h5>
+                <div style={{textAlign: 'center', paddingTop: '3%', paddingBottom: '15%'}}>
                     <CirclePicker
                         color={this.props.color}
                         onChangeComplete={this.props.handleColorChange}/>
                 </div>
-                <div style={{padding: '30px'}}>
+                <h5>Crayon size</h5>
+                <div style={{textAlign: 'center' ,paddingTop: '3%', paddingBottom: '15%'}}>
                     <Slider
                         min={0}
                         max={30}
