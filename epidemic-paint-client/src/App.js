@@ -6,7 +6,6 @@ import ContentEditable from "react-contenteditable";
 import CrayonSettings from './crayonSettings';
 import {Grid, Row, Col, Button} from 'react-bootstrap';
 import MessageModal from './messageModal';
-import './App.css';
 
 class App extends Component {
     constructor() {
