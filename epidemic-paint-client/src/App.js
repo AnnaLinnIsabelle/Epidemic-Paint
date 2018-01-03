@@ -12,7 +12,7 @@ class App extends Component {
         super();
         this.state = {
             endpoint: "http://127.0.0.1:4001",
-            showDropzone: false,
+            dropzone: {show: false, width: false, height: false},
             crayonColor: 'black',
             crayonWidth: 3,
             paint: false,
@@ -22,7 +22,7 @@ class App extends Component {
             savedDrawings: [],
             socketRoom: false, // socket room for current drawing open
             socketRoomInitial: false, // socket room for this client
-            html: 'new_drawing',
+            html: 'new_drawing', // displayed name of the current drawing
             messageModal: {show: false, message: ''}
 
         };
@@ -191,19 +191,22 @@ class App extends Component {
     /** ----------------------------------- Handle image drop ----------------------------------- */
 
     handleDragEnter() {
+        console.log(this.canvas);
         this.counter++;
-        this.setState({showDropzone: true});
+        this.setState({dropzone: {show: true,
+            width: this.canvas.width.toString(),
+            height: this.canvas.height.toString()}});
     }
 
     handleDragLeave() {
         this.counter--;
         if (this.counter === 0) {
-            this.setState({showDropzone: false});
+            this.setState({dropzone: {show: false, width: false, height: false}});
         }
     }
 
     onImageDropAccept(files) {
-        this.setState({showDropzone: false});
+        this.setState({dropzone: {show: false, width: false, height: false}});
         this.counter = 0;
         this.socket.emit('image_drop_accept',
             {
@@ -294,6 +297,12 @@ class App extends Component {
 
 
     render() {
+        //const canvWidth = this.canvas.width ? this.canvas.width : '400px';
+        const dropzoneStyle = {
+            width: '100%',
+            heigth: 'auto',
+            border: '1px solid red'
+        };
         return (
             <Grid onDragEnter={this.handleDragEnter}
                   onDragLeave={this.handleDragLeave}>
@@ -333,11 +342,26 @@ class App extends Component {
                 <Row>
                     <Col sm={6}>
                         <div style={{
-                            display: this.state.showDropzone ? 'block' : 'none',
+                            display: this.state.dropzone.show ? 'block' : 'none',
                             paddingTop: '5%',
                             paddingBottom: '5%'
                         }}>
                             <Dropzone
+                                style={{
+                                    width: '100%',
+                                    paddingBottom: '45%',
+                                    paddingTop: '45%',
+                                    border: '3px dotted #abafb5',
+                                    textAlign: 'center'}}
+                                activeStyle={{
+                                    width: '100%',
+                                    paddingBottom: '45%',
+                                    paddingTop: '45%',
+                                    border: '3px dotted #abafb5',
+                                    boxShadow: '0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19)',
+                                    backgroundColor: '#edeff2',
+                                    textAlign: 'center'
+                            }}
                                 multiple={false}
                                 accept="image/*"
                                 onDropAccepted={this.onImageDropAccept}>
@@ -346,7 +370,7 @@ class App extends Component {
 
                         </div>
                         <div style={{
-                            display: this.state.showDropzone ? 'none' : 'block',
+                            display: this.state.dropzone.show ? 'none' : 'block',
                             paddingTop: '5%',
                             paddingBottom: '5%'
                         }}>
