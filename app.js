@@ -44,7 +44,6 @@ io.on("connection", socket => {
     });
 
     socket.on('undo_latest', (data) => {
-        console.log('undo', data.room);
         io.in(data.room).emit('undo_latest');
     });
 
@@ -53,7 +52,6 @@ io.on("connection", socket => {
     });
 
     socket.on('save_drawing_request', (data) => {
-        console.log('requset to save ' + data.name);
         let index = drawings.findIndex(drawing => drawing.name === data.name);
         let message = '';
         if (index > -1) {

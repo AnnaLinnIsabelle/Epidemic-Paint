@@ -111,7 +111,6 @@ class App extends Component {
         });
 
         this.socket.on('undo_latest', () => {
-            console.log(this.state.history);
             this.state.history.pop();
             this.loadDrawing(this.state.history.slice(-1)[0]);
         });
@@ -297,12 +296,6 @@ class App extends Component {
 
 
     render() {
-        //const canvWidth = this.canvas.width ? this.canvas.width : '400px';
-        const dropzoneStyle = {
-            width: '100%',
-            heigth: 'auto',
-            border: '1px solid red'
-        };
         return (
             <Grid onDragEnter={this.handleDragEnter}
                   onDragLeave={this.handleDragLeave}>
@@ -389,7 +382,7 @@ class App extends Component {
                             <CrayonSettings color={this.state.crayonColor}
                                             handleColorChange={this.handleColorChange}
                                             handleWidthChange={this.handleWidthChange}/>
-                            <Button onClick={this.handleUndo}>undo</Button>
+                            <Button onClick={this.handleUndo}>Undo</Button>
                         </div>
                     </Col>
                 </Row>
