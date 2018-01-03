@@ -5,6 +5,7 @@ import DrawingsList from "./drawingsList";
 import ContentEditable from "react-contenteditable";
 import CrayonSettings from './crayonSettings';
 import {Grid, Row, Col, Button} from 'react-bootstrap';
+import MessageModal from './messageModal';
 import './App.css';
 
 class App extends Component {
@@ -21,7 +22,9 @@ class App extends Component {
             history: [],
             savedDrawings: [],
             socketRoom: false,
-            html: 'new_drawing'
+            html: 'new_drawing',
+            messageModal: {show: false, message: ''}
+
         };
         this.handleDragEnter = this.handleDragEnter.bind(this);
         this.handleDragLeave = this.handleDragLeave.bind(this);
@@ -39,6 +42,8 @@ class App extends Component {
         this.handleColorChange = this.handleColorChange.bind(this);
         this.handleWidthChange = this.handleWidthChange.bind(this);
         this.getMousePos = this.getMousePos.bind(this);
+        this.handleOK = this.handleOK.bind(this);
+        this.handleCancel = this.handleCancel.bind(this);
     }
 
     componentWillMount() {
@@ -107,6 +112,10 @@ class App extends Component {
             console.log(this.state.history);
             this.state.history.pop();
             this.loadDrawing(this.state.history.slice(-1)[0]);
+        });
+
+        this.socket.on('save_drawing_request', (data) => {
+            this.setState({messageModal: {show: true, message: data.message}});
         });
 
         this.mainLoop();
@@ -210,6 +219,18 @@ class App extends Component {
     }
 
     handleSave() {
+        // console.log(this.state.html);
+        //this.socket.emit('unsubscribe', this.state.socketRoom);
+        //this.socket.emit('subscribe', this.state.html);
+        //this.setState({socketRoom: this.state.html});
+        // this.socket.emit('save_drawing',
+        //     {room: this.state.html, name: this.state.html, url: this.state.history.slice(-1)[0]});
+        // this.socket.emit('update_client_history', {room: this.state.html});
+        console.log('save request ' + this.state.html);
+        this.socket.emit('save_drawing_request', {room: this.state.socketRoom, name: this.state.html});
+    }
+
+    handleOK() {
         console.log(this.state.html);
         this.socket.emit('unsubscribe', this.state.socketRoom);
         this.socket.emit('subscribe', this.state.html);
@@ -217,6 +238,11 @@ class App extends Component {
         this.socket.emit('save_drawing',
             {room: this.state.html, name: this.state.html, url: this.state.history.slice(-1)[0]});
         this.socket.emit('update_client_history', {room: this.state.html});
+        this.setState({messageModal: {show: false, message: ''}});
+    }
+
+    handleCancel() {
+        this.setState({messageModal: {show: false, message: ''}});
     }
 
     clickedDrawing(drawing) {
@@ -252,6 +278,15 @@ class App extends Component {
                             <hr></hr>
                         </Col>
                     </Row>
+                <Row>
+                    <Col xs={12}>
+                        <MessageModal
+                            show={this.state.messageModal.show}
+                            message={this.state.messageModal.message}
+                            onOK={this.handleOK}
+                            onCancel={this.handleCancel}/>
+                    </Col>
+                </Row>
                     <Row>
                         <Col xs={6}>
                             <div style={{fontSize: '20px'}}>
