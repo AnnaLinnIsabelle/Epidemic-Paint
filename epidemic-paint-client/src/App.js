@@ -20,8 +20,8 @@ class App extends Component {
             mousePosPrev: false,
             history: [],
             savedDrawings: [],
-            socketRoom: false,
-            socketRoomInitial: false,
+            socketRoom: false, // socket room for current drawing open
+            socketRoomInitial: false, // socket room for this client
             html: 'new_drawing',
             messageModal: {show: false, message: ''}
 
@@ -140,7 +140,7 @@ class App extends Component {
         });
         this.setState({
             mousePosPrev: {
-                x: this.getMousePos(e).x -1,
+                x: this.getMousePos(e).x - 1,
                 y: this.getMousePos(e).y
             }
         });
@@ -148,8 +148,10 @@ class App extends Component {
     }
 
     handleMouseUp() {
-        this.socket.emit('update_client_history', {room: this.state.socketRoom
-            ? this.state.socketRoom : this.state.socketRoomInitial});
+        this.socket.emit('update_client_history', {
+            room: this.state.socketRoom
+                ? this.state.socketRoom : this.state.socketRoomInitial
+        });
         this.setState({paint: false});
     }
 
@@ -203,8 +205,10 @@ class App extends Component {
         this.setState({showDropzone: false});
         this.counter = 0;
         this.socket.emit('image_drop_accept',
-            {room: this.state.socketRoom ? this.state.socketRoom : this.state.socketRoomInitial,
-                imgURL: URL.createObjectURL(files[0])});
+            {
+                room: this.state.socketRoom ? this.state.socketRoom : this.state.socketRoomInitial,
+                imgURL: URL.createObjectURL(files[0])
+            });
     }
 
     /** ----------------------------------------------------------------------------------------- */
@@ -251,16 +255,20 @@ class App extends Component {
         img.onload = () => {
             context.clearRect(0, 0, this.canvas.width, this.canvas.height);
             context.drawImage(img, 0, 0);
-            this.socket.emit('update_client_history', {room: this.state.socketRoom
-                ? this.state.socketRoom : this.state.socketRoomInitial});
+            this.socket.emit('update_client_history', {
+                room: this.state.socketRoom
+                    ? this.state.socketRoom : this.state.socketRoomInitial
+            });
         };
         img.src = imgSrc;
     }
 
     // Undo latest drawn line
     handleUndo() {
-        this.socket.emit('undo_latest', {room: this.state.socketRoom
-            ? this.state.socketRoom : this.state.socketRoomInitial});
+        this.socket.emit('undo_latest', {
+            room: this.state.socketRoom
+                ? this.state.socketRoom : this.state.socketRoomInitial
+        });
     }
 
     // Set name on drawing
@@ -283,12 +291,12 @@ class App extends Component {
         return (
             <Grid onDragEnter={this.handleDragEnter}
                   onDragLeave={this.handleDragLeave}>
-                    <Row>
-                        <Col xs={12}>
+                <Row>
+                    <Col xs={12}>
                         <h1>Epidemic Paint</h1>
-                            <hr></hr>
-                        </Col>
-                    </Row>
+                        <hr></hr>
+                    </Col>
+                </Row>
                 <Row>
                     <Col xs={12}>
                         <MessageModal
@@ -298,25 +306,30 @@ class App extends Component {
                             onCancel={this.handleCancel}/>
                     </Col>
                 </Row>
-                    <Row>
-                        <Col xs={6}>
-                            <div style={{fontSize: '20px'}}>
+                <Row>
+                    <Col xs={6}>
+                        <div style={{fontSize: '20px'}}>
                             <ContentEditable
-                                             html={this.state.html}
-                                             disabled={false}
-                                             onChange={this.handleNameChange}/>
-                            </div>
-                        </Col>
-                        <Col xs={6}>
-                            <div style={{float: 'right'}}>
-                            <Button style={{marginLeft: '5px', marginRight: '5px'}} onClick={this.handleSave}>Save</Button>
+                                html={this.state.html}
+                                disabled={false}
+                                onChange={this.handleNameChange}/>
+                        </div>
+                    </Col>
+                    <Col xs={6}>
+                        <div style={{float: 'right'}}>
+                            <Button style={{marginLeft: '5px', marginRight: '5px'}}
+                                    onClick={this.handleSave}>Save</Button>
                             <Button>New</Button>
-                            </div>
-                        </Col>
-                    </Row>
-                    <Row>
-                        <Col sm={6}>
-                        <div style={{display: this.state.showDropzone ? 'block' : 'none', paddingTop: '5%', paddingBottom: '5%'}}>
+                        </div>
+                    </Col>
+                </Row>
+                <Row>
+                    <Col sm={6}>
+                        <div style={{
+                            display: this.state.showDropzone ? 'block' : 'none',
+                            paddingTop: '5%',
+                            paddingBottom: '5%'
+                        }}>
                             <Dropzone
                                 multiple={false}
                                 accept="image/*"
@@ -325,7 +338,11 @@ class App extends Component {
                             </Dropzone>
 
                         </div>
-                        <div style={{display: this.state.showDropzone ? 'none' : 'block', paddingTop: '5%', paddingBottom: '5%'}}>
+                        <div style={{
+                            display: this.state.showDropzone ? 'none' : 'block',
+                            paddingTop: '5%',
+                            paddingBottom: '5%'
+                        }}>
                             <canvas style={{border: '1px solid black', width: '100%', height: 'auto'}}
                                     ref="canvas"
                                     width={400} height={400}
@@ -335,20 +352,24 @@ class App extends Component {
                                     onMouseLeave={this.handleMouseLeave}>
                             </canvas>
                         </div>
-                        </Col>
-                        <Col sm={6} md={4}>
-                            <div style={{width: '90%', margin: 'auto', paddingTop: '20px'}}>
-                        <CrayonSettings color={this.state.crayonColor}
-                                        handleColorChange={this.handleColorChange}
-                                        handleWidthChange={this.handleWidthChange}/>
-                        <Button onClick={this.handleUndo}>undo</Button>
-                            </div>
-                        </Col>
-                        <Col sm={12} md={2}>
-                        <DrawingsList drawings={this.state.savedDrawings}
-                                      clickedDrawing={this.clickedDrawing}/>
-                        </Col>
-                    </Row>
+                    </Col>
+                    <Col sm={6}>
+                        <div style={{width: '90%', margin: 'auto', paddingTop: '20px', paddingLeft: '10%'}}>
+                            <CrayonSettings color={this.state.crayonColor}
+                                            handleColorChange={this.handleColorChange}
+                                            handleWidthChange={this.handleWidthChange}/>
+                            <Button onClick={this.handleUndo}>undo</Button>
+                        </div>
+                    </Col>
+                </Row>
+                <Row>
+                    <Col sm={6}>
+                        <div style={{width: '100%', paddingTop: '20px', float: 'right'}}>
+                            <DrawingsList drawings={this.state.savedDrawings}
+                                          clickedDrawing={this.clickedDrawing}/>
+                        </div>
+                    </Col>
+                </Row>
             </Grid>
         );
     }
