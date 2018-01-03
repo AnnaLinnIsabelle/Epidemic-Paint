@@ -44,6 +44,7 @@ class App extends Component {
         this.getMousePos = this.getMousePos.bind(this);
         this.handleOK = this.handleOK.bind(this);
         this.handleCancel = this.handleCancel.bind(this);
+        this.handleNew = this.handleNew.bind(this);
     }
 
     componentWillMount() {
@@ -245,6 +246,11 @@ class App extends Component {
         this.loadDrawing(drawing.url);
     }
 
+    handleNew() {
+        window.sessionStorage.clear();
+        window.location.reload();
+    }
+
     /** ----------------------------------------------------------------------------------------- */
 
     // Redraw image on canvas
@@ -319,7 +325,8 @@ class App extends Component {
                         <div style={{float: 'right'}}>
                             <Button style={{marginLeft: '5px', marginRight: '5px'}}
                                     onClick={this.handleSave}>Save</Button>
-                            <Button>New</Button>
+                            <Button style={{marginLeft: '5px', marginRight: '5px'}}
+                                    onClick={this.handleNew}>New</Button>
                         </div>
                     </Col>
                 </Row>
