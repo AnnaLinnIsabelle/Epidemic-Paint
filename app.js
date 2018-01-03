@@ -57,14 +57,11 @@ io.on("connection", socket => {
         let index = drawings.findIndex(drawing => drawing.name === data.name);
         let message = '';
         if (index > -1) {
-            //drawings[index].url = data.url;
             message = 'overwrite previous drawing with name ' + data.name + '?';
         } else {
-            //drawings.push(data);
             message = 'save drawing as ' + data.name + '?';
         }
         io.in(data.room).emit('save_drawing_request', {message: message});
-        //io.emit('saved_drawings', drawings);
     });
 
     socket.on('save_drawing', (data) => {

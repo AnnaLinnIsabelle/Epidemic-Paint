@@ -3,13 +3,8 @@
  */
 import React, {Component} from "react";
 import {Button, Modal, ModalHeader, ModalTitle, ModalBody, ModalFooter} from 'react-bootstrap';
-//import './messageModal.css';
 
 class MessageModal extends Component {
-    constructor(props) {
-        super(props);
-    }
-
 
     render() {
         return (

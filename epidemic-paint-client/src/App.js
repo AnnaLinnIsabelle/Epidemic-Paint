@@ -54,7 +54,6 @@ class App extends Component {
             this.setState({history: JSON.parse(history)});
         }
         if (currDrawing) {
-            console.log('there is currDrawing in sessionStorage: ' + currDrawing);
             this.setState({html: currDrawing});
             this.setState({socketRoom: currDrawing});
         }
@@ -66,6 +65,7 @@ class App extends Component {
         this.socket = socketIOClient(endpoint);
         this.canvas = this.refs.canvas;
 
+        // Load and draw drawing stored in sessionStorage
         if (this.state.history.length > 0) {
             this.loadDrawing(this.state.history.slice(-1)[0]);
         }
@@ -78,14 +78,6 @@ class App extends Component {
                 console.log('connection to room ' + this.state.socketRoom);
                 this.socket.emit('subscribe', this.state.socketRoom);
             }
-/*            if (this.state.socketRoom === false) {
-                console.log('connecting to room ' + room);
-                this.setState({socketRoom: room});
-                this.socket.emit('subscribe', room);
-            } else {
-                console.log('connectiong to room ' + this.state.socketRoom);
-                this.socket.emit('subscribe', this.state.socketRoom);
-            }*/
         });
 
         this.socket.on('saved_drawings', (drawings) => {
@@ -131,6 +123,7 @@ class App extends Component {
         this.mainLoop();
     }
 
+    /** ----------------------------------- Handle mouse events ----------------------------------- */
     getMousePos(e) {
         let rect = this.canvas.getBoundingClientRect();
         let posX = (e.clientX - rect.left) / (rect.right - rect.left) * this.canvas.width;
@@ -138,7 +131,6 @@ class App extends Component {
 
         return {x: posX, y: posY};
     }
-
 
     handleMouseDown(e) {
         this.setState({
@@ -157,7 +149,8 @@ class App extends Component {
     }
 
     handleMouseUp() {
-        this.socket.emit('update_client_history', {room: this.state.socketRoom ? this.state.socketRoom : this.state.socketRoomInitial});
+        this.socket.emit('update_client_history', {room: this.state.socketRoom
+            ? this.state.socketRoom : this.state.socketRoomInitial});
         this.setState({paint: false});
     }
 
@@ -176,6 +169,7 @@ class App extends Component {
         this.setState({paint: false});
     }
 
+    // enable real-time update of painting
     mainLoop() {
         if (this.state.paint && this.state.mousePosPrev) {
             this.socket.emit('draw_line', {
@@ -190,24 +184,9 @@ class App extends Component {
         this.timeout = setTimeout(this.mainLoop, 25);
     }
 
-    loadDrawing(imgSrc) {
-        let context = this.canvas.getContext("2d");
-        context.beginPath();
-        let img = new Image();
-        img.onload = () => {
-            context.clearRect(0, 0, this.canvas.width, this.canvas.height);
-            context.drawImage(img, 0, 0);
-            console.log('update client history in room ' + this.state.socketRoom ? this.state.socketRoom : this.state.socketRoomInitial);
-            this.socket.emit('update_client_history', {room: this.state.socketRoom ? this.state.socketRoom : this.state.socketRoomInitial});
-        };
-        img.src = imgSrc;
-    }
+    /** ----------------------------------------------------------------------------------------- */
 
-
-    handleUndo() {
-        this.socket.emit('undo_latest', {room: this.state.socketRoom ? this.state.socketRoom : this.state.socketRoomInitial});
-    }
-
+    /** ----------------------------------- Handle image drop ----------------------------------- */
 
     handleDragEnter() {
         this.counter++;
@@ -225,20 +204,19 @@ class App extends Component {
         this.setState({showDropzone: false});
         this.counter = 0;
         this.socket.emit('image_drop_accept',
-            {room: this.state.socketRoom ? this.state.socketRoom : this.state.socketRoomInitial, imgURL: URL.createObjectURL(files[0])});
+            {room: this.state.socketRoom ? this.state.socketRoom : this.state.socketRoomInitial,
+                imgURL: URL.createObjectURL(files[0])});
     }
 
+    /** ----------------------------------------------------------------------------------------- */
+
+    /** -------------------------------- Handle save/load drawing ------------------------------- */
+
     handleSave() {
-        // console.log(this.state.html);
-        //this.socket.emit('unsubscribe', this.state.socketRoom);
-        //this.setState({socketRoom: this.state.html});
-        // this.socket.emit('save_drawing',
-        //     {room: this.state.html, name: this.state.html, url: this.state.history.slice(-1)[0]});
-        // this.socket.emit('update_client_history', {room: this.state.html});
-        console.log('save request ' + this.state.html);
         this.socket.emit('save_drawing_request', {room: this.state.socketRoomInitial, name: this.state.html});
     }
 
+    // handles OK to save a new drawing or overwrite an existing drawing
     handleOK() {
         console.log(this.state.html);
         this.socket.emit('unsubscribe', this.state.socketRoom);
@@ -250,28 +228,53 @@ class App extends Component {
         this.setState({messageModal: {show: false, message: ''}});
     }
 
+    // handles cancel of save drawing
     handleCancel() {
         this.setState({messageModal: {show: false, message: ''}});
     }
 
+    // handles selection of existing saved drawing
     clickedDrawing(drawing) {
         this.socket.emit('unsubscribe', this.state.socketRoom);
         this.socket.emit('subscribe', drawing.name);
         this.setState({socketRoom: drawing.name});
-        console.log('clicked drawing');
-        console.log(drawing);
         this.setState({html: drawing.name});
         this.loadDrawing(drawing.url);
     }
 
+    /** ----------------------------------------------------------------------------------------- */
+
+    // Redraw image on canvas
+    loadDrawing(imgSrc) {
+        let context = this.canvas.getContext("2d");
+        context.beginPath();
+        let img = new Image();
+        img.onload = () => {
+            context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            context.drawImage(img, 0, 0);
+            this.socket.emit('update_client_history', {room: this.state.socketRoom
+                ? this.state.socketRoom : this.state.socketRoomInitial});
+        };
+        img.src = imgSrc;
+    }
+
+    // Undo latest drawn line
+    handleUndo() {
+        this.socket.emit('undo_latest', {room: this.state.socketRoom
+            ? this.state.socketRoom : this.state.socketRoomInitial});
+    }
+
+    // Set name on drawing
     handleNameChange(event) {
         this.setState({html: event.target.value});
     }
 
+    // Set crayon color
     handleColorChange(color) {
         this.setState({crayonColor: color.hex});
     }
 
+    // Set crayon size
     handleWidthChange(value) {
         this.setState({crayonWidth: value});
     }
