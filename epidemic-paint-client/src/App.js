@@ -50,9 +50,13 @@ class App extends Component {
     componentWillMount() {
         const history = window.sessionStorage.getItem('history');
         const currDrawing = window.sessionStorage.getItem('currDrawing');
+        //const clientRoom = window.sessionStorage.getItem('clientRoom');
         if (history) {
             this.setState({history: JSON.parse(history)});
         }
+/*        if (clientRoom) {
+            this.setState({socketRoomInitial: clientRoom});
+        }*/
         if (currDrawing) {
             this.setState({html: currDrawing});
             this.setState({socketRoom: currDrawing});
@@ -71,9 +75,15 @@ class App extends Component {
         }
 
         this.socket.on('initial_room', (room) => {
-            this.setState({socketRoomInitial: room});
-            console.log('connecting to room ' + room);
-            this.socket.emit('subscribe', {room: room, client: room});
+            //if (this.state.socketRoomInitial) {
+                //console.log('connection to room ' + this.state.socketRoomInitial);
+                //this.socket.emit('subscribe', {room: this.state.socketRoomInitial, client: this.state.socketRoomInitial});
+            //} else {
+                this.setState({socketRoomInitial: room});
+                //window.sessionStorage.setItem('clientRoom', this.state.socketRoomInitial);
+                console.log('connected to room ' + room);
+                //this.socket.emit('subscribe', {room: room, client: room});
+           // }
             if (this.state.socketRoom) {
                 console.log('connection to room ' + this.state.socketRoom);
                 this.socket.emit('subscribe', {room: this.state.socketRoom, client: room});
@@ -107,6 +117,7 @@ class App extends Component {
         });
 
         this.socket.on('new_client_joined', () => {
+            console.log('new client joined');
             this.socket.emit('unsaved_changes', {
                 room: this.state.socketRoom ? this.state.socketRoom : this.state.socketRoomInitial,
                 url: this.state.history.slice(-1)[0]})
@@ -131,6 +142,7 @@ class App extends Component {
 
         this.mainLoop();
     }
+
 
     /** ----------------------------------- Handle mouse events ----------------------------------- */
     getMousePos(e) {
@@ -235,7 +247,9 @@ class App extends Component {
     // handles OK to save a new drawing or overwrite an existing drawing
     handleOK() {
         console.log(this.state.html);
-        this.socket.emit('unsubscribe', {room: this.state.socketRoom, client: this.state.socketRoomInitial});
+        if (this.state.socketRoom) {
+            this.socket.emit('unsubscribe', {room: this.state.socketRoom, client: this.state.socketRoomInitial});
+        }
         this.socket.emit('subscribe', {room: this.state.html, client: this.state.socketRoomInitial});
         this.setState({socketRoom: this.state.html});
         this.socket.emit('save_drawing',
@@ -251,7 +265,9 @@ class App extends Component {
 
     // handles selection of existing saved drawing
     clickedDrawing(drawing) {
-        this.socket.emit('unsubscribe', {room: this.state.socketRoom, client: this.state.socketRoomInitial});
+        if (this.state.socketRoom) {
+            this.socket.emit('unsubscribe', {room: this.state.socketRoom, client: this.state.socketRoomInitial});
+        }
         this.socket.emit('subscribe', {room: drawing.name, client: this.state.socketRoomInitial});
         this.setState({socketRoom: drawing.name});
         this.setState({html: drawing.name});
@@ -259,7 +275,8 @@ class App extends Component {
     }
 
     handleNew() {
-        window.sessionStorage.clear();
+        window.sessionStorage.removeItem('history');
+        window.sessionStorage.removeItem('currDrawing');
         window.location.reload();
     }
 

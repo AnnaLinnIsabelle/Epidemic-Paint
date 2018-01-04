@@ -17,35 +17,39 @@ const io = socketIo(server);
 
 let drawings = [];
 let connectedClients = 0;
-let rooms = new Map();
 
 
 io.on("connection", socket => {
     console.log("New client connected");
+    let clientRoom = socket.id;
+    io.clients((err, clients) => {
+        console.log('clients', clients);
+    });
+    console.log('clientRoom', clientRoom);
     connectedClients++;
-    socket.emit('initial_room', 'client_'+ connectedClients.toString());
+    socket.emit('initial_room', clientRoom);
     socket.emit('saved_drawings', drawings);
 
     socket.on('subscribe', (data) => {
         console.log('joining room', data.room);
-        socket.join(data.room);
-        // check if another client is already connected to this room. If so, get unsaved changes
-        if (rooms.has(data.room)){
-            let client = rooms.get(data.room);
-            io.in(client).emit('new_client_joined');
-        }
-        rooms.set(data.room, data.client); // stores the latest client that joined a room
+        socket.join(data.room, () => {
+            let rooms = Object.keys(socket.rooms);
+            //console.log(rooms);
+        });
+        let socketID = io.nsps['/'].adapter.rooms[data.room].sockets;
+        console.log('socketID', socketID);
+        Object.keys(socketID).forEach(id => {
+              console.log('socketID', id);
+        });
+        let other = Object.keys(socketID)[0];
+        console.log('other', other);
+
+        io.in(other).emit('new_client_joined');
     });
 
     socket.on('unsubscribe', (data) => {
         console.log('leaving room', data.room);
         socket.leave(data.room);
-        if (rooms.has(data.room)) {
-            let client = rooms.get(data.room);
-            if (client === data.client) {
-                rooms.delete(data.room);
-            }
-        }
     });
 
     socket.on('draw_line', function(data) {
@@ -80,7 +84,6 @@ io.on("connection", socket => {
         if (index > -1) {
             drawings[index].url = data.url;
         } else {
-            console.log(data);
             drawings.push({name: data.name, url: data.url});
         }
         io.emit('saved_drawings', drawings);
