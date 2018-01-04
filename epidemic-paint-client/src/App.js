@@ -235,7 +235,7 @@ class App extends Component {
     // handles OK to save a new drawing or overwrite an existing drawing
     handleOK() {
         console.log(this.state.html);
-        this.socket.emit('unsubscribe', this.state.socketRoom);
+        this.socket.emit('unsubscribe', {room: this.state.socketRoom, client: this.state.socketRoomInitial});
         this.socket.emit('subscribe', {room: this.state.html, client: this.state.socketRoomInitial});
         this.setState({socketRoom: this.state.html});
         this.socket.emit('save_drawing',
@@ -251,7 +251,7 @@ class App extends Component {
 
     // handles selection of existing saved drawing
     clickedDrawing(drawing) {
-        this.socket.emit('unsubscribe', this.state.socketRoom);
+        this.socket.emit('unsubscribe', {room: this.state.socketRoom, client: this.state.socketRoomInitial});
         this.socket.emit('subscribe', {room: drawing.name, client: this.state.socketRoomInitial});
         this.setState({socketRoom: drawing.name});
         this.setState({html: drawing.name});

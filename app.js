@@ -37,9 +37,15 @@ io.on("connection", socket => {
         rooms.set(data.room, data.client); // stores the latest client that joined a room
     });
 
-    socket.on('unsubscribe', (room) => {
-        console.log('leaving room', room);
-        socket.leave(room);
+    socket.on('unsubscribe', (data) => {
+        console.log('leaving room', data.room);
+        socket.leave(data.room);
+        if (rooms.has(data.room)) {
+            let client = rooms.get(data.room);
+            if (client === data.client) {
+                rooms.delete(data.room);
+            }
+        }
     });
 
     socket.on('draw_line', function(data) {
