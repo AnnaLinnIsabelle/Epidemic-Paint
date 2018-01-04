@@ -17,7 +17,6 @@ const io = socketIo(server);
 
 let drawings = [];
 
-
 io.on("connection", socket => {
     console.log("New client connected", socket.id);
     socket.emit('saved_drawings', drawings);

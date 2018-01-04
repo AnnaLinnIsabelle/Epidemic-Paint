@@ -7,7 +7,7 @@ import CrayonSettings from './crayonSettings';
 import {Grid, Row, Col, Button} from 'react-bootstrap';
 import MessageModal from './messageModal';
 
-class App extends Component {
+class EpidemicPaint extends Component {
     constructor() {
         super();
         this.state = {
@@ -409,4 +409,4 @@ class App extends Component {
     }
 }
 
-export default App;
+export default EpidemicPaint;
