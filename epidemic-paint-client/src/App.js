@@ -2,7 +2,7 @@ import React, {Component} from "react";
 import Dropzone from "react-dropzone";
 import socketIOClient from "socket.io-client";
 import DrawingsList from "./drawingsList";
-import ContentEditable from "react-contenteditable";
+import DrawingName from './drawingName';
 import CrayonSettings from './crayonSettings';
 import {Grid, Row, Col, Button} from 'react-bootstrap';
 import MessageModal from './messageModal';
@@ -316,22 +316,10 @@ class App extends Component {
                     </Col>
                 </Row>
                 <Row>
-                    <Col xs={12}>
-                        <MessageModal
-                            show={this.state.messageModal.show}
-                            message={this.state.messageModal.message}
-                            onOK={this.handleOK}
-                            onCancel={this.handleCancel}/>
-                    </Col>
-                </Row>
-                <Row>
                     <Col xs={6}>
-                        <div style={{fontSize: '20px'}}>
-                            <ContentEditable
-                                html={this.state.html}
-                                disabled={false}
-                                onChange={this.handleNameChange}/>
-                        </div>
+                       <DrawingName
+                       html={this.state.html}
+                       handleNameChange={this.handleNameChange}/>
                     </Col>
                     <Col xs={6}>
                         <div style={{float: 'right'}}>
@@ -340,6 +328,15 @@ class App extends Component {
                             <Button style={{marginLeft: '5px', marginRight: '5px'}}
                                     onClick={this.handleNew}>New</Button>
                         </div>
+                    </Col>
+                </Row>
+                <Row>
+                    <Col xs={12}>
+                        <MessageModal
+                            show={this.state.messageModal.show}
+                            message={this.state.messageModal.message}
+                            onOK={this.handleOK}
+                            onCancel={this.handleCancel}/>
                     </Col>
                 </Row>
                 <Row>
