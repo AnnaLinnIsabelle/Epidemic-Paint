@@ -9,7 +9,7 @@ const port = process.env.PORT || 4001;
 const index = require("./routes/index");
 
 const app = express();
-app.use(index); //app.use(express.static(__dirname + '/public'));
+app.use(index);
 
 const server = http.createServer(app);
 
@@ -56,7 +56,7 @@ io.on("connection", socket => {
         let index = drawings.findIndex(drawing => drawing.name === data.name);
         let message = '';
         if (index > -1) {
-            message = 'Overwrite previous drawing with name "' + data.name + '"?';
+            message = 'Overwrite existing drawing with name "' + data.name + '"?';
         } else {
             message = 'Save drawing as "' + data.name + '"?';
         }

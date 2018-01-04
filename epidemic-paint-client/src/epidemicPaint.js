@@ -315,6 +315,7 @@ class EpidemicPaint extends Component {
                 <Row>
                     <Col xs={12}>
                         <h1>Epidemic Paint</h1>
+                        <h4 style={{fontStyle: 'italic'}}>Collaborative web painting!</h4>
                         <hr></hr>
                     </Col>
                 </Row>
