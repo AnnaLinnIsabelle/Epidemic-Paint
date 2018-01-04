@@ -17,17 +17,24 @@ const io = socketIo(server);
 
 let drawings = [];
 let connectedClients = 0;
+let rooms = new Map();
 
 
 io.on("connection", socket => {
     console.log("New client connected");
     connectedClients++;
-    socket.emit('initial_room', 'room_'+ connectedClients.toString());
+    socket.emit('initial_room', 'client_'+ connectedClients.toString());
     socket.emit('saved_drawings', drawings);
 
-    socket.on('subscribe', (room) => {
-        console.log('joining room', room);
-        socket.join(room);
+    socket.on('subscribe', (data) => {
+        console.log('joining room', data.room);
+        socket.join(data.room);
+        if (rooms.has(data.room)){
+            let client = rooms.get(data.room);
+            console.log('get unsaved changes from ' + client);
+            io.in(client).emit('new_client_joined');
+        }
+        rooms.set(data.room, data.client); // stores the latest client that joined a room
     });
 
     socket.on('unsubscribe', (room) => {
@@ -73,7 +80,16 @@ io.on("connection", socket => {
         io.emit('saved_drawings', drawings);
     });
 
+    socket.on('unsaved_changes', (data) => {
+        io.in(data.room).emit('unsaved_changes', data.url);
+    });
+
     socket.on("disconnect", () => console.log("client disconnected"));
 });
 
 server.listen(port, () => console.log(`Listening on port ${port}`));
+
+
+function getUnsavedChanges(room) {
+
+}

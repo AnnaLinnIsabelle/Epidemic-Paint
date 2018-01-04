@@ -20,7 +20,7 @@ class App extends Component {
             mousePosPrev: false,
             history: [],
             savedDrawings: [],
-            socketRoom: false, // socket room for current drawing open
+            socketRoom: false, // socket room for current open drawing
             socketRoomInitial: false, // socket room for this client
             html: 'new_drawing', // displayed name of the current drawing
             messageModal: {show: false, message: ''}
@@ -73,10 +73,10 @@ class App extends Component {
         this.socket.on('initial_room', (room) => {
             this.setState({socketRoomInitial: room});
             console.log('connecting to room ' + room);
-            this.socket.emit('subscribe', room);
+            this.socket.emit('subscribe', {room: room, client: room});
             if (this.state.socketRoom) {
                 console.log('connection to room ' + this.state.socketRoom);
-                this.socket.emit('subscribe', this.state.socketRoom);
+                this.socket.emit('subscribe', {room: this.state.socketRoom, client: room});
             }
         });
 
@@ -104,6 +104,16 @@ class App extends Component {
             if (this.state.socketRoom) {
                 window.sessionStorage.setItem('currDrawing', this.state.socketRoom);
             }
+        });
+
+        this.socket.on('new_client_joined', () => {
+            this.socket.emit('unsaved_changes', {
+                room: this.state.socketRoom ? this.state.socketRoom : this.state.socketRoomInitial,
+                url: this.state.history.slice(-1)[0]})
+        });
+
+        this.socket.on('unsaved_changes', (imgUrl) => {
+            this.loadDrawing(imgUrl);
         });
 
         this.socket.on('image_drop_accept', (src) => {
@@ -226,7 +236,7 @@ class App extends Component {
     handleOK() {
         console.log(this.state.html);
         this.socket.emit('unsubscribe', this.state.socketRoom);
-        this.socket.emit('subscribe', this.state.html);
+        this.socket.emit('subscribe', {room: this.state.html, client: this.state.socketRoomInitial});
         this.setState({socketRoom: this.state.html});
         this.socket.emit('save_drawing',
             {room: this.state.html, name: this.state.html, url: this.state.history.slice(-1)[0]});
@@ -242,7 +252,7 @@ class App extends Component {
     // handles selection of existing saved drawing
     clickedDrawing(drawing) {
         this.socket.emit('unsubscribe', this.state.socketRoom);
-        this.socket.emit('subscribe', drawing.name);
+        this.socket.emit('subscribe', {room: drawing.name, client: this.state.socketRoomInitial});
         this.setState({socketRoom: drawing.name});
         this.setState({html: drawing.name});
         this.loadDrawing(drawing.url);
