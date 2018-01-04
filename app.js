@@ -29,9 +29,9 @@ io.on("connection", socket => {
     socket.on('subscribe', (data) => {
         console.log('joining room', data.room);
         socket.join(data.room);
+        // check if another client is already connected to this room. If so, get unsaved changes
         if (rooms.has(data.room)){
             let client = rooms.get(data.room);
-            console.log('get unsaved changes from ' + client);
             io.in(client).emit('new_client_joined');
         }
         rooms.set(data.room, data.client); // stores the latest client that joined a room
@@ -88,8 +88,3 @@ io.on("connection", socket => {
 });
 
 server.listen(port, () => console.log(`Listening on port ${port}`));
-
-
-function getUnsavedChanges(room) {
-
-}
