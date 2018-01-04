@@ -16,35 +16,20 @@ const server = http.createServer(app);
 const io = socketIo(server);
 
 let drawings = [];
-let connectedClients = 0;
 
 
 io.on("connection", socket => {
-    console.log("New client connected");
-    let clientRoom = socket.id;
-    io.clients((err, clients) => {
-        console.log('clients', clients);
-    });
-    console.log('clientRoom', clientRoom);
-    connectedClients++;
-    socket.emit('initial_room', clientRoom);
+    console.log("New client connected", socket.id);
     socket.emit('saved_drawings', drawings);
 
-    socket.on('subscribe', (data) => {
-        console.log('joining room', data.room);
-        socket.join(data.room, () => {
-            let rooms = Object.keys(socket.rooms);
-            //console.log(rooms);
-        });
-        let socketID = io.nsps['/'].adapter.rooms[data.room].sockets;
-        console.log('socketID', socketID);
-        Object.keys(socketID).forEach(id => {
-              console.log('socketID', id);
-        });
-        let other = Object.keys(socketID)[0];
-        console.log('other', other);
-
-        io.in(other).emit('new_client_joined');
+    socket.on('subscribe', (room) => {
+        console.log('joining room', room);
+        socket.join(room);
+        let socketsInRoom = io.nsps['/'].adapter.rooms[room];
+        if (socketsInRoom.length > 1) {
+            let otherSocket = Object.keys(socketsInRoom.sockets)[0];
+            io.in(otherSocket).emit('new_client_joined');
+        }
     });
 
     socket.on('unsubscribe', (data) => {

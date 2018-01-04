@@ -74,19 +74,12 @@ class App extends Component {
             this.loadDrawing(this.state.history.slice(-1)[0]);
         }
 
-        this.socket.on('initial_room', (room) => {
-            //if (this.state.socketRoomInitial) {
-                //console.log('connection to room ' + this.state.socketRoomInitial);
-                //this.socket.emit('subscribe', {room: this.state.socketRoomInitial, client: this.state.socketRoomInitial});
-            //} else {
-                this.setState({socketRoomInitial: room});
-                //window.sessionStorage.setItem('clientRoom', this.state.socketRoomInitial);
-                console.log('connected to room ' + room);
-                //this.socket.emit('subscribe', {room: room, client: room});
-           // }
+        this.socket.on('connect', () => {
+            console.log('connected to socket', this.socket.id);
+            this.setState({socketRoomInitial: this.socket.id});
             if (this.state.socketRoom) {
                 console.log('connection to room ' + this.state.socketRoom);
-                this.socket.emit('subscribe', {room: this.state.socketRoom, client: room});
+                this.socket.emit('subscribe', this.state.socketRoom);
             }
         });
 
@@ -246,11 +239,13 @@ class App extends Component {
 
     // handles OK to save a new drawing or overwrite an existing drawing
     handleOK() {
-        console.log(this.state.html);
+        console.log('initial', this.state.socketRoomInitial);
+        console.log('html', this.state.html);
+        console.log('socketRoom', this.state.socketRoom);
         if (this.state.socketRoom) {
             this.socket.emit('unsubscribe', {room: this.state.socketRoom, client: this.state.socketRoomInitial});
         }
-        this.socket.emit('subscribe', {room: this.state.html, client: this.state.socketRoomInitial});
+        this.socket.emit('subscribe', this.state.html);
         this.setState({socketRoom: this.state.html});
         this.socket.emit('save_drawing',
             {room: this.state.html, name: this.state.html, url: this.state.history.slice(-1)[0]});
@@ -268,7 +263,7 @@ class App extends Component {
         if (this.state.socketRoom) {
             this.socket.emit('unsubscribe', {room: this.state.socketRoom, client: this.state.socketRoomInitial});
         }
-        this.socket.emit('subscribe', {room: drawing.name, client: this.state.socketRoomInitial});
+        this.socket.emit('subscribe', drawing.name);
         this.setState({socketRoom: drawing.name});
         this.setState({html: drawing.name});
         this.loadDrawing(drawing.url);
