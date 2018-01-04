@@ -27,7 +27,7 @@ class DrawingName extends Component {
         return (
             <div style={style} onMouseEnter={this.toggleHover} onMouseLeave={this.toggleHover}>
                 <ContentEditable
-                    html={this.props.html}
+                    html={this.props.name}
                     disabled={false}
                     onChange={this.props.handleNameChange}/>
             </div>

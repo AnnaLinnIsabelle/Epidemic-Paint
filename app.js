@@ -32,9 +32,9 @@ io.on("connection", socket => {
         }
     });
 
-    socket.on('unsubscribe', (data) => {
-        console.log('leaving room', data.room);
-        socket.leave(data.room);
+    socket.on('unsubscribe', (room) => {
+        console.log('leaving room', room);
+        socket.leave(room);
     });
 
     socket.on('draw_line', function(data) {
@@ -57,9 +57,9 @@ io.on("connection", socket => {
         let index = drawings.findIndex(drawing => drawing.name === data.name);
         let message = '';
         if (index > -1) {
-            message = 'overwrite previous drawing with name ' + data.name + '?';
+            message = 'Overwrite previous drawing with name "' + data.name + '"?';
         } else {
-            message = 'save drawing as ' + data.name + '?';
+            message = 'Save drawing as "' + data.name + '"?';
         }
         io.in(data.room).emit('save_drawing_request', {message: message});
     });

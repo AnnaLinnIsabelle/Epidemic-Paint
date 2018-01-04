@@ -20,9 +20,9 @@ class App extends Component {
             mousePosPrev: false,
             history: [],
             savedDrawings: [],
-            socketRoom: false, // socket room for current open drawing
-            socketRoomInitial: false, // socket room for this client
-            html: 'new_drawing', // displayed name of the current drawing
+            drawingRoom: false, // socket room for current open drawing
+            socketRoom: false, // socket room for this client
+            currentDrawing: 'new_drawing', // displayed name of the current drawing
             messageModal: {show: false, message: ''}
 
         };
@@ -50,16 +50,12 @@ class App extends Component {
     componentWillMount() {
         const history = window.sessionStorage.getItem('history');
         const currDrawing = window.sessionStorage.getItem('currDrawing');
-        //const clientRoom = window.sessionStorage.getItem('clientRoom');
         if (history) {
             this.setState({history: JSON.parse(history)});
         }
-/*        if (clientRoom) {
-            this.setState({socketRoomInitial: clientRoom});
-        }*/
         if (currDrawing) {
-            this.setState({html: currDrawing});
-            this.setState({socketRoom: currDrawing});
+            this.setState({currentDrawing: currDrawing});
+            this.setState({drawingRoom: currDrawing});
         }
     }
 
@@ -76,10 +72,10 @@ class App extends Component {
 
         this.socket.on('connect', () => {
             console.log('connected to socket', this.socket.id);
-            this.setState({socketRoomInitial: this.socket.id});
-            if (this.state.socketRoom) {
-                console.log('connection to room ' + this.state.socketRoom);
-                this.socket.emit('subscribe', this.state.socketRoom);
+            this.setState({socketRoom: this.socket.id});
+            if (this.state.drawingRoom) {
+                console.log('connection to room ' + this.state.drawingRoom);
+                this.socket.emit('subscribe', this.state.drawingRoom);
             }
         });
 
@@ -101,18 +97,17 @@ class App extends Component {
         });
 
         this.socket.on('update_client_history', () => {
-            console.log('updateing client history');
             this.setState({history: [...this.state.history, this.canvas.toDataURL()]});
             window.sessionStorage.setItem('history', JSON.stringify([...this.state.history, this.canvas.toDataURL()]));
-            if (this.state.socketRoom) {
-                window.sessionStorage.setItem('currDrawing', this.state.socketRoom);
+            if (this.state.drawingRoom) {
+                window.sessionStorage.setItem('currDrawing', this.state.drawingRoom);
             }
         });
 
         this.socket.on('new_client_joined', () => {
             console.log('new client joined');
             this.socket.emit('unsaved_changes', {
-                room: this.state.socketRoom ? this.state.socketRoom : this.state.socketRoomInitial,
+                room: this.state.drawingRoom ? this.state.drawingRoom : this.state.socketRoom,
                 url: this.state.history.slice(-1)[0]})
         });
 
@@ -164,8 +159,8 @@ class App extends Component {
 
     handleMouseUp() {
         this.socket.emit('update_client_history', {
-            room: this.state.socketRoom
-                ? this.state.socketRoom : this.state.socketRoomInitial
+            room: this.state.drawingRoom
+                ? this.state.drawingRoom : this.state.socketRoom
         });
         this.setState({paint: false});
     }
@@ -189,7 +184,7 @@ class App extends Component {
     mainLoop() {
         if (this.state.paint && this.state.mousePosPrev) {
             this.socket.emit('draw_line', {
-                room: this.state.socketRoom ? this.state.socketRoom : this.state.socketRoomInitial,
+                room: this.state.drawingRoom ? this.state.drawingRoom : this.state.socketRoom,
                 line: [this.state.mousePos, this.state.mousePosPrev],
                 crayonColor: this.state.crayonColor,
                 crayonWidth: this.state.crayonWidth
@@ -205,7 +200,6 @@ class App extends Component {
     /** ----------------------------------- Handle image drop ----------------------------------- */
 
     handleDragEnter() {
-        console.log(this.canvas);
         this.counter++;
         this.setState({dropzone: {show: true,
             width: this.canvas.width.toString(),
@@ -224,7 +218,7 @@ class App extends Component {
         this.counter = 0;
         this.socket.emit('image_drop_accept',
             {
-                room: this.state.socketRoom ? this.state.socketRoom : this.state.socketRoomInitial,
+                room: this.state.drawingRoom ? this.state.drawingRoom : this.state.socketRoom,
                 imgURL: URL.createObjectURL(files[0])
             });
     }
@@ -234,22 +228,19 @@ class App extends Component {
     /** -------------------------------- Handle save/load drawing ------------------------------- */
 
     handleSave() {
-        this.socket.emit('save_drawing_request', {room: this.state.socketRoomInitial, name: this.state.html});
+        this.socket.emit('save_drawing_request', {room: this.state.socketRoom, name: this.state.currentDrawing});
     }
 
     // handles OK to save a new drawing or overwrite an existing drawing
     handleOK() {
-        console.log('initial', this.state.socketRoomInitial);
-        console.log('html', this.state.html);
-        console.log('socketRoom', this.state.socketRoom);
-        if (this.state.socketRoom) {
-            this.socket.emit('unsubscribe', {room: this.state.socketRoom, client: this.state.socketRoomInitial});
+        if (this.state.drawingRoom) {
+            this.socket.emit('unsubscribe', this.state.drawingRoom);
         }
-        this.socket.emit('subscribe', this.state.html);
-        this.setState({socketRoom: this.state.html});
+        this.socket.emit('subscribe', this.state.currentDrawing);
+        this.setState({drawingRoom: this.state.currentDrawing});
         this.socket.emit('save_drawing',
-            {room: this.state.html, name: this.state.html, url: this.state.history.slice(-1)[0]});
-        this.socket.emit('update_client_history', {room: this.state.html});
+            {room: this.state.currentDrawing, name: this.state.currentDrawing, url: this.state.history.slice(-1)[0]});
+        this.socket.emit('update_client_history', {room: this.state.currentDrawing});
         this.setState({messageModal: {show: false, message: ''}});
     }
 
@@ -260,12 +251,12 @@ class App extends Component {
 
     // handles selection of existing saved drawing
     clickedDrawing(drawing) {
-        if (this.state.socketRoom) {
-            this.socket.emit('unsubscribe', {room: this.state.socketRoom, client: this.state.socketRoomInitial});
+        if (this.state.drawingRoom) {
+            this.socket.emit('unsubscribe', this.state.drawingRoom);
         }
         this.socket.emit('subscribe', drawing.name);
-        this.setState({socketRoom: drawing.name});
-        this.setState({html: drawing.name});
+        this.setState({drawingRoom: drawing.name});
+        this.setState({currentDrawing: drawing.name});
         this.loadDrawing(drawing.url);
     }
 
@@ -286,8 +277,8 @@ class App extends Component {
             context.clearRect(0, 0, this.canvas.width, this.canvas.height);
             context.drawImage(img, 0, 0);
             this.socket.emit('update_client_history', {
-                room: this.state.socketRoom
-                    ? this.state.socketRoom : this.state.socketRoomInitial
+                room: this.state.drawingRoom
+                    ? this.state.drawingRoom : this.state.socketRoom
             });
         };
         img.src = imgSrc;
@@ -296,14 +287,14 @@ class App extends Component {
     // Undo latest drawn line
     handleUndo() {
         this.socket.emit('undo_latest', {
-            room: this.state.socketRoom
-                ? this.state.socketRoom : this.state.socketRoomInitial
+            room: this.state.drawingRoom
+                ? this.state.drawingRoom : this.state.socketRoom
         });
     }
 
     // Set name on drawing
     handleNameChange(event) {
-        this.setState({html: event.target.value});
+        this.setState({currentDrawing: event.target.value});
     }
 
     // Set crayon color
@@ -330,7 +321,7 @@ class App extends Component {
                 <Row>
                     <Col xs={6}>
                        <DrawingName
-                       html={this.state.html}
+                       name={this.state.currentDrawing}
                        handleNameChange={this.handleNameChange}/>
                     </Col>
                     <Col xs={6}>
