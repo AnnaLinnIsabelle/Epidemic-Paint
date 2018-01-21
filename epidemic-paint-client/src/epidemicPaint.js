@@ -315,7 +315,7 @@ class EpidemicPaint extends Component {
                 <Row>
                     <Col xs={12}>
                         <h1>Epidemic Paint</h1>
-                        <h4 style={{fontStyle: 'italic'}}>Collaborative web painting!</h4>
+                        <h4 className="subheading">Collaborative web painting!</h4>
                         <hr></hr>
                     </Col>
                 </Row>
@@ -326,10 +326,10 @@ class EpidemicPaint extends Component {
                        handleNameChange={this.handleNameChange}/>
                     </Col>
                     <Col xs={6}>
-                        <div style={{float: 'right'}}>
-                            <Button style={{marginLeft: '5px', marginRight: '5px'}}
+                        <div className="right-flow-div">
+                            <Button className="margin-btn"
                                     onClick={this.handleSave}>Save</Button>
-                            <Button style={{marginLeft: '5px', marginRight: '5px'}}
+                            <Button className="margin-btn"
                                     onClick={this.handleNew}>New</Button>
                         </div>
                     </Col>
@@ -345,41 +345,18 @@ class EpidemicPaint extends Component {
                 </Row>
                 <Row>
                     <Col sm={6}>
-                        <div style={{
-                            display: this.state.dropzone.show ? 'block' : 'none',
-                            paddingTop: '5%',
-                            paddingBottom: '5%'
-                        }}>
+                        <div className={this.state.dropzone.show ? "dropzone-div-show" : "dropzone-div-hide"}>
                             <Dropzone
-                                style={{
-                                    width: '100%',
-                                    paddingBottom: '45%',
-                                    paddingTop: '45%',
-                                    border: '3px dotted #abafb5',
-                                    textAlign: 'center'}}
-                                activeStyle={{
-                                    width: '100%',
-                                    paddingBottom: '45%',
-                                    paddingTop: '45%',
-                                    border: '3px dotted #abafb5',
-                                    boxShadow: '0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19)',
-                                    backgroundColor: '#edeff2',
-                                    textAlign: 'center'
-                            }}
+                                className="dropzone"
+                                activeClassName="dropzone-active"
                                 multiple={false}
                                 accept="image/*"
                                 onDropAccepted={this.onImageDropAccept}>
                                 <p>Drop an image here to add it to the drawing</p>
                             </Dropzone>
-
                         </div>
-                        <div style={{
-                            display: this.state.dropzone.show ? 'none' : 'block',
-                            paddingTop: '5%',
-                            paddingBottom: '5%'
-                        }}>
-                            <canvas style={{border: '1px solid black', width: '100%', height: 'auto'}}
-                                    ref="canvas"
+                        <div className={this.state.dropzone.show ? "canvas-div-hide" : "canvas-div-show"}>
+                            <canvas ref="canvas"
                                     width={400} height={400}
                                     onMouseDown={this.handleMouseDown}
                                     onMouseMove={this.handleMouseMove}
@@ -389,7 +366,7 @@ class EpidemicPaint extends Component {
                         </div>
                     </Col>
                     <Col sm={6}>
-                        <div style={{width: '90%', margin: 'auto', paddingTop: '20px', paddingLeft: '10%'}}>
+                        <div className="tools-div">
                             <CrayonSettings color={this.state.crayonColor}
                                             handleColorChange={this.handleColorChange}
                                             handleWidthChange={this.handleWidthChange}/>
@@ -399,7 +376,7 @@ class EpidemicPaint extends Component {
                 </Row>
                 <Row>
                     <Col sm={6}>
-                        <div style={{width: '100%', paddingTop: '20px', float: 'right'}}>
+                        <div className="saved-drawings-div">
                             <DrawingsList drawings={this.state.savedDrawings}
                                           clickedDrawing={this.clickedDrawing}/>
                         </div>

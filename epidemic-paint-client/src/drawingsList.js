@@ -21,7 +21,7 @@ class DrawingsList extends Component {
         return (
             <div>
                 <h4>Saved drawings</h4>
-                <div style={{paddingTop: '3%', paddingBottom: '15%'}}>
+                <div className="drawingslist-div">
                 <ListGroup>
                     {this.props.drawings.map((drawing) => {
                         return <ListGroupItem key={drawing.name}

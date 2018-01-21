@@ -18,14 +18,14 @@ class DrawingName extends Component {
     }
 
     render() {
-        let style;
+        let divStyle;
         if (this.state.hover) {
-            style = {fontSize: '20px', color: 'black', fontWeight: '600'}
+            divStyle = "hover-name-div";
         } else {
-            style = {fontSize: '20px', color: '#aaa6b0', fontStyle: 'italic'}
+            divStyle = "name-div";
         }
         return (
-            <div style={style} onMouseEnter={this.toggleHover} onMouseLeave={this.toggleHover}>
+            <div className={divStyle} onMouseEnter={this.toggleHover} onMouseLeave={this.toggleHover}>
                 <ContentEditable
                     html={this.props.name}
                     disabled={false}
