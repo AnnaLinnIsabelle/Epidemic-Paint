@@ -13,7 +13,7 @@ class EpidemicPaint extends Component {
         this.state = {
             endpoint: "http://127.0.0.1:4001",
             dropzone: {show: false, width: false, height: false},
-            crayonColor: 'black',
+            crayonColor: '#607d8b',
             crayonWidth: 3,
             paint: false,
             mousePos: false,
@@ -79,6 +79,10 @@ class EpidemicPaint extends Component {
             }
         });
 
+        this.socket.on('save_drawing_request', (data) => {
+            this.setState({messageModal: {show: true, message: data.message}});
+        });
+
         this.socket.on('saved_drawings', (drawings) => {
             this.setState({savedDrawings: drawings});
         });
@@ -108,11 +112,12 @@ class EpidemicPaint extends Component {
             console.log('new client joined');
             this.socket.emit('unsaved_changes', {
                 room: this.state.drawingRoom ? this.state.drawingRoom : this.state.socketRoom,
-                url: this.state.history.slice(-1)[0]})
+                history: this.state.history})
         });
 
-        this.socket.on('unsaved_changes', (imgUrl) => {
-            this.loadDrawing(imgUrl);
+        this.socket.on('unsaved_changes', (history) => {
+            this.setState({history: history});
+            this.loadDrawing(history.slice(-1)[0]);
         });
 
         this.socket.on('image_drop_accept', (src) => {
@@ -121,11 +126,12 @@ class EpidemicPaint extends Component {
 
         this.socket.on('undo_latest', () => {
             this.state.history.pop();
-            this.loadDrawing(this.state.history.slice(-1)[0]);
-        });
-
-        this.socket.on('save_drawing_request', (data) => {
-            this.setState({messageModal: {show: true, message: data.message}});
+            if (this.state.history.length > 0) {
+                this.loadDrawing(this.state.history.slice(-1)[0]);
+            } else {
+                let context = this.canvas.getContext("2d");
+                context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            }
         });
 
         this.mainLoop();
@@ -257,6 +263,7 @@ class EpidemicPaint extends Component {
         this.socket.emit('subscribe', drawing.name);
         this.setState({drawingRoom: drawing.name});
         this.setState({currentDrawing: drawing.name});
+        this.setState({history: []});
         this.loadDrawing(drawing.url);
     }
 

@@ -74,7 +74,7 @@ io.on("connection", socket => {
     });
 
     socket.on('unsaved_changes', (data) => {
-        io.in(data.room).emit('unsaved_changes', data.url);
+        io.in(data.room).emit('unsaved_changes', data.history);
     });
 
     socket.on("disconnect", () => console.log("client disconnected"));
